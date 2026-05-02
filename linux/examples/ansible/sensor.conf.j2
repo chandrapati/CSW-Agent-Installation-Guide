@@ -1,0 +1,8 @@
+# Managed by Ansible — do not edit by hand.
+# Renders to /etc/tetration/sensor.conf and is read by tetd at start.
+ACTIVATION_KEY={{ csw_activation_key }}
+SCOPE={{ csw_scope }}
+{% if csw_proxy_host is defined %}
+HTTPS_PROXY_HOST={{ csw_proxy_host }}
+HTTPS_PROXY_PORT={{ csw_proxy_port | default(8080) }}
+{% endif %}

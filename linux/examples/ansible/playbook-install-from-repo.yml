@@ -1,0 +1,114 @@
+---
+# Install the Cisco Secure Workload sensor from an internal package repo.
+# This is the recommended steady-state pattern (Pattern C in linux/04-ansible.md).
+#
+# Required group_vars (or extra-vars):
+#   csw_activation_key      — secret; from CSW Manage → Agents (use Vault)
+#   csw_scope               — scope label, e.g. "prod:web-tier"
+#   csw_cluster_fqdn        — cluster destination, e.g. "csw.example.com"
+#   csw_repo_baseurl        — your internal repo, e.g. "https://repo.internal.example.com/csw"
+#   csw_repo_keyurl         — signing key URL, e.g. "https://repo.internal.example.com/keys/csw.asc"
+
+- name: Install Cisco Secure Workload sensor (internal repo)
+  hosts: csw_targets
+  become: true
+  gather_facts: true
+  vars:
+    csw_conf_path: /etc/tetration/sensor.conf
+    csw_ca_path: /etc/tetration/ca.pem
+
+  tasks:
+    - name: Verify required vars are set
+      ansible.builtin.assert:
+        that:
+          - csw_activation_key is defined and csw_activation_key | length > 0
+          - csw_scope is defined and csw_scope | length > 0
+          - csw_cluster_fqdn is defined and csw_cluster_fqdn | length > 0
+          - csw_repo_baseurl is defined and csw_repo_baseurl | length > 0
+          - csw_repo_keyurl is defined and csw_repo_keyurl | length > 0
+        fail_msg: "Required CSW variables are missing — see playbook header for the list."
+
+    - name: Configure CSW yum/dnf repo (RHEL family)
+      ansible.builtin.yum_repository:
+        name: csw
+        description: "Cisco Secure Workload Agents"
+        baseurl: "{{ csw_repo_baseurl }}/el{{ ansible_facts['distribution_major_version'] }}/x86_64"
+        gpgcheck: true
+        gpgkey: "{{ csw_repo_keyurl }}"
+        sslverify: true
+        enabled: true
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Place CSW APT signing key (Debian family)
+      ansible.builtin.get_url:
+        url: "{{ csw_repo_keyurl }}"
+        dest: /etc/apt/keyrings/csw-signing-key.asc
+        mode: '0644'
+        owner: root
+        group: root
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Configure CSW APT source (Debian family)
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/csw-signing-key.asc] {{ csw_repo_baseurl }} {{ ansible_facts['distribution_release'] }} main"
+        filename: csw
+        state: present
+        update_cache: true
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Ensure /etc/tetration exists
+      ansible.builtin.file:
+        path: /etc/tetration
+        state: directory
+        owner: root
+        group: root
+        mode: '0750'
+
+    - name: Place cluster CA (on-prem clusters; safe to skip if file isn't shipped)
+      ansible.builtin.copy:
+        src: ca.pem
+        dest: "{{ csw_ca_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      when: csw_ca_local_present | default(false) | bool
+
+    - name: Render activation config (sensor.conf)
+      ansible.builtin.template:
+        src: sensor.conf.j2
+        dest: "{{ csw_conf_path }}"
+        owner: root
+        group: root
+        mode: '0640'
+      notify: Restart tetd
+
+    - name: Install tet-sensor
+      ansible.builtin.package:
+        name: tet-sensor
+        state: present
+
+    - name: Ensure tetd running and enabled
+      ansible.builtin.systemd:
+        name: tetd
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Verify outbound 443 to cluster
+      ansible.builtin.wait_for:
+        host: "{{ csw_cluster_fqdn }}"
+        port: 443
+        timeout: 10
+      register: cluster_reachable
+      failed_when: false
+
+    - name: Show cluster reachability
+      ansible.builtin.debug:
+        msg: >
+          Cluster {{ csw_cluster_fqdn }}:443 reachable: {{ cluster_reachable.failed | ternary('NO', 'YES') }}
+
+  handlers:
+    - name: Restart tetd
+      ansible.builtin.systemd:
+        name: tetd
+        state: restarted

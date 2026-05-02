@@ -1,0 +1,72 @@
+---
+# Verify the Cisco Secure Workload sensor is healthy.
+# Run after install or as a periodic compliance check.
+
+- name: Verify CSW sensor health
+  hosts: csw_targets
+  become: true
+  gather_facts: false
+  vars:
+    csw_cluster_fqdn: "{{ csw_cluster_fqdn | default('csw.example.com') }}"
+
+  tasks:
+    - name: Confirm tet-sensor package installed
+      ansible.builtin.shell:
+        cmd: |
+          set -e
+          if command -v rpm >/dev/null 2>&1 && rpm -q tet-sensor >/dev/null 2>&1; then
+            rpm -q tet-sensor
+            exit 0
+          fi
+          if command -v dpkg >/dev/null 2>&1 && dpkg -l tet-sensor 2>/dev/null | grep -q '^ii'; then
+            dpkg -l tet-sensor | tail -1
+            exit 0
+          fi
+          echo "tet-sensor not installed" >&2
+          exit 1
+        executable: /bin/bash
+      register: pkg_check
+      changed_when: false
+      failed_when: pkg_check.rc != 0
+
+    - name: Confirm tetd is active
+      ansible.builtin.command: systemctl is-active tetd
+      register: tetd_state
+      changed_when: false
+      failed_when: tetd_state.stdout.strip() != 'active'
+
+    - name: Confirm tetd is enabled at boot
+      ansible.builtin.command: systemctl is-enabled tetd
+      register: tetd_enabled
+      changed_when: false
+      failed_when: tetd_enabled.stdout.strip() != 'enabled'
+
+    - name: Probe outbound 443 to cluster
+      ansible.builtin.wait_for:
+        host: "{{ csw_cluster_fqdn }}"
+        port: 443
+        timeout: 5
+      register: probe
+      failed_when: false
+
+    - name: Tail recent agent log
+      ansible.builtin.shell: |
+        if [ -f /var/log/tetration/tet-sensor.log ]; then
+          tail -20 /var/log/tetration/tet-sensor.log
+        else
+          echo "no agent log found"
+        fi
+      args:
+        executable: /bin/bash
+      register: log_tail
+      changed_when: false
+
+    - name: Summary per host
+      ansible.builtin.debug:
+        msg:
+          - "Package:       {{ pkg_check.stdout }}"
+          - "tetd active:   {{ tetd_state.stdout }}"
+          - "tetd enabled:  {{ tetd_enabled.stdout }}"
+          - "Cluster 443:   {{ 'reachable' if not probe.failed else 'UNREACHABLE' }}"
+          - "Recent log:    (last 20 lines below)"
+          - "{{ log_tail.stdout_lines | join('\n') }}"

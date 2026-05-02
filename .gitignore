@@ -1,0 +1,50 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Office lock files (in case we ever ship docx)
+~$*.docx
+~$*.xlsx
+~$*.pptx
+
+# Local secrets / credentials — never commit these
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+sensor.conf
+proxy.conf
+*activation*key*
+*.tfvars
+!*.tfvars.example
+
+# Build artefacts
+*.log
+*.tmp
+build/
+dist/
+.cache/
+
+# Terraform local state (these examples are illustrative; real state should never be local)
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Python venvs (in case we add any tooling later)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node modules (none today; defensive)
+node_modules/

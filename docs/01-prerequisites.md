@@ -118,10 +118,13 @@ restart the agent service.
 
 ## 2. Operating system support
 
-CSW publishes a formal **Compatibility Matrix** in the Cisco Secure
-Workload documentation portal that lists exact supported OS and
-kernel versions per CSW release. Always check the matrix for your
-specific CSW version before any install. The list below is the
+CSW publishes a formal [**Compatibility Matrix**](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html)
+in the Cisco Secure Workload documentation portal — a single page
+covering all current agent releases — that lists exact supported
+OS and kernel versions per CSW release alongside supported
+external systems (AnyConnect, ISE, vCenter, Kubernetes, OpenShift,
+Secure Firewall, etc.). Always check the matrix for your specific
+CSW version before any install. The list below is the
 typical-currency snapshot for context; treat it as illustrative.
 
 ### Linux — Deep Visibility / Enforcement (the common sensor types)

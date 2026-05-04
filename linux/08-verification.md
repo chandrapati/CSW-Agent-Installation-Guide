@@ -257,8 +257,8 @@ after install)".
 1. Check for kernel module compile failures:
    `dmesg | grep -i tet` or `journalctl -u tetd | grep -i kernel`
 2. Confirm `kernel-headers` matches `uname -r`
-3. Confirm OS / kernel are on the Compatibility Matrix for the
-   installed agent version
+3. Confirm OS / kernel are on the [Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html)
+   for the installed agent version
 4. Open a TAC case with the evidence bundle from
    [`../operations/08-evidence-audit.md`](../operations/08-evidence-audit.md)
 

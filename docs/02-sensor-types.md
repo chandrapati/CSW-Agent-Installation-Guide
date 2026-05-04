@@ -9,7 +9,8 @@ decision table.
 > Guide* — see [`00-official-references.md`](./00-official-references.md).
 > CSW 4.0 SaaS supports agents on Linux, Windows, AIX, Solaris,
 > and Kubernetes / OpenShift platforms. Always cross-check the
-> Compatibility Matrix for your release.
+> [Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html)
+> for your release.
 >
 > Two pages on docs.cisco.com are the canonical references for
 > what's covered below:

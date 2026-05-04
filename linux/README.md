@@ -32,9 +32,9 @@ against the CSW cluster.
 
 The Deep Visibility / Enforcement sensors compile a small kernel
 module per supported (distribution, version, kernel) tuple. The
-official **Compatibility Matrix** in the CSW documentation portal
-is the source of truth for your specific CSW release. The list
-below is illustrative.
+official [**Compatibility Matrix**](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html)
+in the CSW documentation portal is the source of truth for your
+specific CSW release. The list below is illustrative.
 
 | Distribution | Common supported versions |
 |---|---|

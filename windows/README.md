@@ -44,8 +44,8 @@ installed, running as a Windows service (binary name
 ## OS support snapshot
 
 The Windows agent supports current Windows Server releases out of
-the box. Always cross-check the **Compatibility Matrix** in the
-CSW documentation portal for your specific CSW release.
+the box. Always cross-check the [**Compatibility Matrix**](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html)
+in the CSW documentation portal for your specific CSW release.
 
 | Distribution | Common supported versions |
 |---|---|

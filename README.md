@@ -205,15 +205,29 @@ official Cisco Secure Workload product documentation, your
 organisation's change-management process, or qualified consulting
 engagement.
 
+> **Official Cisco Secure Workload documentation.** The full set
+> of canonical pointers — User Guides (4.0
+> [On-Premises](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40.html)
+> and [SaaS](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-saas-v40.html)),
+> [Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html),
+> Connectors chapter, per-OS install pages, release notes — is
+> consolidated in
+> [`docs/00-official-references.md`](./docs/00-official-references.md).
+> The
+> [CSW 4.0 documentation landing page](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/landing-page/secureworkload-40-docs.html)
+> is the navigation root if you need to drill into a section that
+> isn't called out in this repo. **When this guide and the User
+> Guide disagree, the User Guide wins.**
+
 Specifically:
 
 - Cisco Secure Workload package names, default install paths,
   systemd unit names (`tetd`), Windows service names, and registry
   paths reflect typical practice at the time of authoring. The
-  authoritative source for any specific CSW release is the *Cisco
-  Secure Workload User Guide* and the release notes shipped with
-  your CSW cluster (or with the SaaS portal). Cross-check before
-  deploying.
+  authoritative source for any specific CSW release is the
+  [*Cisco Secure Workload User Guide*](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40.html)
+  and the release notes shipped with your CSW cluster (or with
+  the SaaS portal). Cross-check before deploying.
 - This guide is **release-version-agnostic** in its structure but
   may include commands that change between major versions. Look
   for version-specific notes inline; when in doubt, refer to the
@@ -230,6 +244,19 @@ Specifically:
   to Enforce on day one is the single most common cause of
   preventable outages during CSW rollouts.
 
-This document should receive subject-matter-expert review (current
-Cisco Secure Workload SE / TAC channel) before being used to gate
-any production change.
+### Questions, sizing, licensing, or anything else?
+
+For questions about your specific deployment — release-version
+specifics, customer-environment trade-offs, sizing, licensing,
+Compatibility-Matrix edge cases, or anything that requires
+cluster-side workflow review — **reach out to your Cisco Secure
+Workload account team** (your assigned Cisco SE or partner SE).
+If you don't yet have an account team, the
+[Cisco Secure Workload product home page](https://www.cisco.com/c/en/us/products/security/secure-workload/index.html)
+has the *Contact Cisco* / *Get a demo* / *Find a partner* paths,
+or use [Cisco's general contact page](https://www.cisco.com/c/en/us/about/contact-cisco.html).
+For incidents on a deployed cluster,
+[open a Cisco TAC case](https://www.cisco.com/c/en/us/support/index.html).
+
+This document should receive subject-matter-expert review before
+being used to gate any production change.

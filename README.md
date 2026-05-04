@@ -100,34 +100,41 @@ CSW-Agent-Installation-Guide/
 
 ## How to use this guide
 
-0. **Read `docs/00-official-references.md` first.** It cross-references
-   the CSW 4.0 On-Premises and SaaS User Guides and restates the
-   authoritative items most often missed (1 GB storage, root /
-   Administrator privilege, `tet-sensor` user under SELinux, the
-   Linux installer flag set, the Windows NPCAP golden-image trap,
-   K8s images-pulled-from-cluster behaviour, Istio + Calico support,
-   and the AnyConnect / ISE no-agent paths).
-1. **Read `docs/01-prerequisites.md` next.** Almost every failed
-   CSW agent install traces back to one of: a closed firewall port,
-   a TLS trust gap, an unsupported OS / kernel, or a clock skew. The
-   prerequisites doc is short on purpose — these are the gates.
-2. **Pick a sensor type from `docs/02-sensor-types.md`.** *Deep
-   Visibility* and *Enforcement* are the two flavours 90 % of
-   customer fleets run; the other four (Universal Visibility,
+0. **Read [`docs/00-official-references.md`](./docs/00-official-references.md) first.**
+   It cross-references the CSW 4.0 On-Premises and SaaS User
+   Guides and restates the authoritative items most often missed
+   (1 GB storage, root / Administrator privilege, `tet-sensor`
+   user under SELinux, the Linux installer flag set, the Windows
+   NPCAP golden-image trap, K8s images-pulled-from-cluster
+   behaviour, Istio + Calico support, and the AnyConnect / ISE
+   no-agent paths).
+1. **Read [`docs/01-prerequisites.md`](./docs/01-prerequisites.md) next.**
+   Almost every failed CSW agent install traces back to one of:
+   a closed firewall port, a TLS trust gap, an unsupported OS /
+   kernel, or a clock skew. The prerequisites doc is short on
+   purpose — these are the gates.
+2. **Pick a sensor type from [`docs/02-sensor-types.md`](./docs/02-sensor-types.md).**
+   *Deep Visibility* and *Enforcement* are the two flavours 90 %
+   of customer fleets run; the other four (Universal Visibility,
    AnyConnect NVM, NetFlow / ERSPAN ingestion, Cloud Sensor) have
    specific niches that the doc walks through.
-3. **Pick an installation method from `docs/03-decision-matrix.md`.**
+3. **Pick an installation method from [`docs/03-decision-matrix.md`](./docs/03-decision-matrix.md).**
    The matrix maps environment shape (one host vs. fleet, on-prem
    vs. cloud, with vs. without an automation pipeline) to the
    recommended method.
-4. **Follow the per-method runbook** under `linux/`, `windows/`,
-   `cloud/`, `kubernetes/`, or `agentless/`. Each runbook is
+4. **Follow the per-method runbook** under
+   [`linux/`](./linux/README.md),
+   [`windows/`](./windows/README.md),
+   [`cloud/`](./cloud/README.md),
+   [`kubernetes/`](./kubernetes/README.md), or
+   [`agentless/`](./agentless/README.md). Each runbook is
    self-contained: prerequisites, install steps, verification,
    common errors.
 5. **For first-time POV deployments, read
-   `operations/07-enforcement-rollout.md`.** Going straight to
-   Enforce on day one is the single most common cause of "CSW
-   broke production" stories. The phased rollout pattern avoids it.
+   [`operations/07-enforcement-rollout.md`](./operations/07-enforcement-rollout.md).**
+   Going straight to Enforce on day one is the single most common
+   cause of "CSW broke production" stories. The phased rollout
+   pattern avoids it.
 
 ---
 
@@ -218,10 +225,10 @@ Specifically:
   before running in production.
 - Production deployments should always start in **Monitoring**
   mode and progress to Enforcement only after the simulation
-  workflow (`operations/07-enforcement-rollout.md`) has
-  retired the obvious would-be-blocked flows. Going straight to
-  Enforce on day one is the single most common cause of preventable
-  outages during CSW rollouts.
+  workflow ([`operations/07-enforcement-rollout.md`](./operations/07-enforcement-rollout.md))
+  has retired the obvious would-be-blocked flows. Going straight
+  to Enforce on day one is the single most common cause of
+  preventable outages during CSW rollouts.
 
 This document should receive subject-matter-expert review (current
 Cisco Secure Workload SE / TAC channel) before being used to gate

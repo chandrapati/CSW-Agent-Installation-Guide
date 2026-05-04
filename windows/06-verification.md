@@ -288,7 +288,7 @@ if ($timeStatus -match 'Last Successful Sync Time:\s*\d') {
    ```
 2. Check for EDR / Defender quarantining the agent driver
 3. Open a TAC case with the evidence bundle from
-   [`../operations/08-evidence-collection.md`](../operations/08-evidence-collection.md)
+   [`../operations/08-evidence-audit.md`](../operations/08-evidence-audit.md)
 
 ### "Software inventory empty in UI after 30 min"
 
@@ -303,5 +303,5 @@ if ($timeStatus -match 'Last Successful Sync Time:\s*\d') {
 ## See also
 
 - [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) — when verification fails
-- [`../operations/08-evidence-collection.md`](../operations/08-evidence-collection.md) — what to gather before a TAC case
+- [`../operations/08-evidence-audit.md`](../operations/08-evidence-audit.md) — what to gather before a TAC case
 - [`../docs/04-rollout-strategy.md`](../docs/04-rollout-strategy.md) — what to verify between Monitor / Simulate / Enforce phases

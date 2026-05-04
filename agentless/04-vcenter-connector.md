@@ -23,8 +23,12 @@ VMs themselves; this is purely the vSphere control-plane view.
   - The **host agent** on the guest VMs, or
   - **NSX flow data** ingested via a separate connector (in
     releases that support it), or
-  - Out-of-band flow capture (port mirror to a hardware sensor —
-    see [`../docs/02-sensor-types.md`](../docs/02-sensor-types.md))
+  - **NetFlow / ERSPAN ingestion** from the upstream physical
+    network (export NetFlow from the ToR / leaf, or run an
+    ERSPAN session from the dvSwitch / port group, into a Secure
+    Workload Ingest Appliance) — see
+    [`../docs/02-sensor-types.md` § 5](../docs/02-sensor-types.md)
+    and the [Connectors chapter on docs.cisco.com](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html).
 - Process / software / CVE / enforcement on the guest
 
 ---
@@ -171,5 +175,6 @@ vCenters:
 ## See also
 
 - [`05-comparison-matrix.md`](./05-comparison-matrix.md)
-- [`../docs/02-sensor-types.md`](../docs/02-sensor-types.md) — including the *Hardware Sensor* option for flow capture without guest agents
+- [`../docs/02-sensor-types.md`](../docs/02-sensor-types.md) — including the *NetFlow / ERSPAN ingestion* path (§ 5) for flow capture without guest agents
+- [Configure and Manage Connectors for Secure Workload (4.0 On-Prem)](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html) — Cisco's authoritative connectors reference
 - [`../linux/`](../linux/) and [`../windows/`](../windows/) — agent path for guest VMs

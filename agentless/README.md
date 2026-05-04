@@ -6,6 +6,18 @@ releases) ingest inventory and flow telemetry from cloud and
 virtualisation control planes via API. No software runs on the
 workload.
 
+> **Official source.** All CSW connectors — cloud, vCenter,
+> NetFlow / IPFIX, ERSPAN, AnyConnect, ISE, F5, NetScaler,
+> Meraki, Secure Firewall — are documented in a single chapter
+> of the User Guide:
+> [Configure and Manage Connectors for Secure Workload (4.0
+> On-Prem)](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html).
+> The same chapter exists in the SaaS user guide. The
+> per-connector subsections include source-device
+> configuration (e.g., NetFlow exporter syntax, ERSPAN session
+> setup, AWS / Azure / GCP IAM scope) — refer to it in
+> conjunction with the runbooks here.
+
 > Connectors are **complementary** to the host agent, not a
 > replacement. The agent has process attribution, software
 > inventory, and CVE lookup that the connector cannot match. Use

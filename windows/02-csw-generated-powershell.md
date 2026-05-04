@@ -227,4 +227,4 @@ Full troubleshooting in
 - [`03-sccm-deployment.md`](./03-sccm-deployment.md) — SCCM rollout
 - [`04-intune-deployment.md`](./04-intune-deployment.md) — Intune rollout
 - [`06-verification.md`](./06-verification.md)
-- [`../operations/02-proxy-configuration.md`](../operations/02-proxy-configuration.md) — proxy configuration
+- [`../operations/02-proxy.md`](../operations/02-proxy.md) — proxy configuration

@@ -6,7 +6,7 @@ single biggest cause of "CSW broke production" stories is going
 straight from "agent installed" to "Enforce mode on, allow-list
 authored from one week of data". This doc is the guard-rail.
 
-> See also [`../operations/07-enforcement-mode-rollout.md`](../operations/07-enforcement-mode-rollout.md)
+> See also [`../operations/07-enforcement-rollout.md`](../operations/07-enforcement-rollout.md)
 > for the operational playbook (the per-scope steps, simulation log
 > review checklist, and roll-back procedure). This doc covers the
 > *strategy* — why the phases exist and what to verify between them.
@@ -188,5 +188,5 @@ A well-paced rollout produces these signals:
 - [`01-prerequisites.md`](./01-prerequisites.md) — pre-install gates
 - [`02-sensor-types.md`](./02-sensor-types.md) — sensor selection
 - [`03-decision-matrix.md`](./03-decision-matrix.md) — install method selection
-- [`../operations/07-enforcement-mode-rollout.md`](../operations/07-enforcement-mode-rollout.md) — operational playbook for Phase 3
+- [`../operations/07-enforcement-rollout.md`](../operations/07-enforcement-rollout.md) — operational playbook for Phase 3
 - [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) — when something goes wrong

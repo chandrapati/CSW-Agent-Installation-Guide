@@ -15,6 +15,16 @@ telemetry into a working policy workspace"* without surprises.
 > cross-check version-specific details there before relying on this
 > repository in a customer engagement.
 
+> **Official Cisco documentation — CSW 4.0:**
+> [On-Premises 4.0 User Guide](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40.html)
+> · [SaaS 4.0 User Guide](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-saas-v40.html).
+> A consolidated cross-reference (with the canonical pre-install
+> requirements, installer-script flag table, NPCAP / golden-image
+> caveat, K8s service-mesh and CNI support notes, and the
+> AnyConnect / ISE alternatives to a CSW agent) is in
+> [`docs/00-official-references.md`](./docs/00-official-references.md)
+> — read it before any new install attempt.
+
 ---
 
 ## What's in this repo
@@ -24,10 +34,12 @@ CSW-Agent-Installation-Guide/
 ├── README.md                  ← you are here (overview + decision matrix)
 ├── INDEX.md                   ← jump table by OS / by automation tool / by question
 ├── docs/                      ← background concepts (read first)
+│   ├── 00-official-references.md    ← CSW 4.0 official docs cross-reference (read first!)
 │   ├── 01-prerequisites.md          ← network, ports, certs, OS support, sizing
 │   ├── 02-sensor-types.md           ← Deep Visibility, Enforcement, UV, NVM, HW, Cloud
 │   ├── 03-decision-matrix.md        ← which method for which environment
-│   └── 04-rollout-strategy.md       ← Monitor → Simulate → Enforce
+│   ├── 04-rollout-strategy.md       ← Monitor → Simulate → Enforce
+│   └── 05-anyconnect-ise-alternatives.md ← when no CSW agent is needed (NVM / ISE)
 ├── linux/                     ← all Linux installation methods
 │   ├── README.md
 │   ├── 01-manual-rpm-deb.md         ← interactive RPM/DEB on a single host
@@ -88,15 +100,22 @@ CSW-Agent-Installation-Guide/
 
 ## How to use this guide
 
-1. **Read `docs/01-prerequisites.md` first.** Almost every failed
+0. **Read `docs/00-official-references.md` first.** It cross-references
+   the CSW 4.0 On-Premises and SaaS User Guides and restates the
+   authoritative items most often missed (1 GB storage, root /
+   Administrator privilege, `tet-sensor` user under SELinux, the
+   Linux installer flag set, the Windows NPCAP golden-image trap,
+   K8s images-pulled-from-cluster behaviour, Istio + Calico support,
+   and the AnyConnect / ISE no-agent paths).
+1. **Read `docs/01-prerequisites.md` next.** Almost every failed
    CSW agent install traces back to one of: a closed firewall port,
    a TLS trust gap, an unsupported OS / kernel, or a clock skew. The
    prerequisites doc is short on purpose — these are the gates.
 2. **Pick a sensor type from `docs/02-sensor-types.md`.** *Deep
    Visibility* and *Enforcement* are the two flavours 90 % of
    customer fleets run; the other four (Universal Visibility,
-   AnyConnect NVM, Hardware Sensor, Cloud Sensor) have specific
-   niches that the doc walks through.
+   AnyConnect NVM, NetFlow / ERSPAN ingestion, Cloud Sensor) have
+   specific niches that the doc walks through.
 3. **Pick an installation method from `docs/03-decision-matrix.md`.**
    The matrix maps environment shape (one host vs. fleet, on-prem
    vs. cloud, with vs. without an automation pipeline) to the
@@ -120,7 +139,7 @@ CSW-Agent-Installation-Guide/
 | **Enforcement** | Deep Visibility + workload-side firewall enforcement | Linux + Windows hosts | Workloads that need policy enforced at the host |
 | **Universal Visibility (UV)** | Lighter-weight flow telemetry, no enforcement | Older OS, ARM, embedded, niche kernels | When the Deep agent isn't supported on the platform |
 | **AnyConnect NVM** | Endpoint flow telemetry from user devices | Laptops / desktops via Cisco Secure Client | User-endpoint visibility (BYOD-style) |
-| **Hardware Sensor** | Span-port flow ingest from a network appliance | Network tap / SPAN port | When agents are not allowed (network appliances, OT gateways) |
+| **NetFlow / ERSPAN ingestion** | Flow records exported by the network device (NetFlow v9 / IPFIX / ERSPAN / NSEL) | Connector on a Secure Workload Ingest Appliance — **no agent on the workload** | When agents are not allowed (network appliances, storage / SAN controllers, OT gateways). See the [Connectors chapter on docs.cisco.com](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html). |
 | **Cloud Sensor / Cloud Connector** | Agentless inventory + flow logs via cloud APIs | CSW pulls from AWS / Azure / GCP / vCenter | Cloud accounts with broad workload coverage requirements; DR or sandbox accounts where agents aren't deployed |
 
 Detail in [`docs/02-sensor-types.md`](./docs/02-sensor-types.md).
@@ -145,7 +164,7 @@ Detail in [`docs/02-sensor-types.md`](./docs/02-sensor-types.md).
 | Kubernetes / OpenShift nodes | DaemonSet via Helm chart | Standard pattern for K8s clusters |
 | Air-gapped K8s | Raw DaemonSet manifest with internal registry | When Helm or external chart pulls aren't permitted |
 | Cloud accounts with broad workload coverage and minimal agent footprint | Cloud Connector (agentless) | Inventory + flow-log scope where deploying agents is impractical |
-| Workloads where agents are not allowed | Hardware sensor + Cloud Connector | Network appliances, certain OT systems |
+| Workloads where agents are not allowed | NetFlow / ERSPAN ingestion via the appropriate Secure Workload connector + Cloud Connector | Network appliances, storage / SAN controllers, OT systems — use the device's native NetFlow / IPFIX / NSEL export where available; fall back to ERSPAN when only port-mirroring is supported |
 
 Full decision tree with phased-rollout commentary in
 [`docs/03-decision-matrix.md`](./docs/03-decision-matrix.md).

@@ -9,6 +9,19 @@ The matrix below answers: *given my environment, which method is
 the lowest-friction and most operationally durable for the long
 run?*
 
+> **Official source for software-agent install paths.**
+> [Deploy Software Agents on Workloads (4.0 On-Prem)](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+> documents both Cisco-supported install methods — the Agent Image
+> Installer (manual `.rpm` / `.deb` / `.msi`) and the Agent Script
+> Installer (the script CSW generates per tenant). Everything
+> beyond those two methods (Ansible, Puppet, Chef, Salt, Helm,
+> Terraform, golden images, etc.) is practitioner orchestration
+> *around* those two install paths — the runbooks in this repo
+> show the patterns, but the underlying installer-script flag set
+> and per-OS installer behaviour are owned by the User Guide.
+> See [`00-official-references.md`](./00-official-references.md)
+> for the full link list.
+
 ---
 
 ## The Linux flowchart
@@ -160,7 +173,7 @@ Detail in [`../agentless/`](../agentless/).
 | Helm DaemonSet | Kubernetes / OpenShift | Low (Helm install) | Low (`helm upgrade`) | Limited (chart pull) | Standard K8s pattern |
 | Raw DaemonSet manifest | Air-gapped K8s; no-Helm shops | Medium | Low | Yes (with internal registry) | Use when Helm isn't permitted |
 | Cloud Connector (agentless) | Inventory + flow-log scope without agent | Medium (IAM / RBAC + connector config) | Low | No (connector talks to public cloud APIs) | Complementary to host agents |
-| Hardware Sensor | Workloads that forbid agents | High (appliance + SPAN port) | Low (after deployment) | Yes | For network appliances, OT systems |
+| **NetFlow / ERSPAN ingestion** via Secure Workload connector | Workloads that forbid agents (network appliances, storage / SAN, OT) | Medium — Ingest Appliance + connector + source-device export config | Low (after deployment) | Yes | Use the device's native NetFlow / IPFIX / NSEL export where available; fall back to ERSPAN for port-mirror-only sources. See [Cisco Connectors chapter](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html). |
 
 ---
 
@@ -177,7 +190,7 @@ parallel**. A typical large enterprise looks like:
 | Existing Windows servers | SCCM application + required deployment |
 | New Windows servers | Same SCCM deployment + image-baked agent for the most-common builds |
 | Kubernetes (EKS, AKS, on-prem RKE) | DaemonSet via Helm in each cluster |
-| Storage / network appliances | Hardware Sensor on a SPAN port covering the storage VLAN |
+| Storage / network appliances | NetFlow / ERSPAN ingestion via the matching Secure Workload connector — NetFlow / IPFIX / NSEL where the device exports it, ERSPAN of the storage / appliance VLAN otherwise |
 | DR / sandbox cloud accounts | Cloud Connector for inventory + flow-log visibility |
 | Corporate laptops | AnyConnect NVM via Cisco Secure Client + Intune |
 

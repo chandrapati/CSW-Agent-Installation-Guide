@@ -12,6 +12,30 @@ node and the workload pods scheduled on it.
 > and pod-to-external flows; intra-pod traffic (between
 > containers in the same pod) is not the unit of capture.
 
+> **CSW 4.0 — important architectural detail.** The Kubernetes /
+> OpenShift installer script does **not** contain the agent
+> software itself. The script provisions namespace, RBAC, the
+> DaemonSet, and configuration — and **each cluster node pulls
+> the agent Docker image from the Secure Workload cluster** at
+> pod startup time. This means cluster nodes need image-pull
+> connectivity to the CSW cluster (or to your internal registry
+> mirror — see [`01-daemonset-helm.md`](./01-daemonset-helm.md)).
+> See [`../docs/00-official-references.md`](../docs/00-official-references.md)
+> for the User Guide reference.
+
+> **Service mesh + CNI support (CSW 4.0).**
+> - **Istio Service Mesh:** CSW provides comprehensive visibility
+>   and enforcement for applications running within Kubernetes /
+>   OpenShift clusters that have Istio enabled.
+> - **Calico:** CSW 4.0 supports **Calico 3.13** with one of the
+>   following Felix configurations:
+>   - `ChainInsertMode: Append, IptablesRefreshInterval: 0`, or
+>   - `ChainInsertMode: Insert, IptablesFilterAllowAction: Return,
+>     IptablesMangleAllowAction: Return, IptablesRefreshInterval: 0`
+>   If your Calico version or Felix config differs, validate
+>   with Cisco TAC before relying on CSW enforcement on that
+>   cluster.
+
 ---
 
 ## Methods in this folder
@@ -97,5 +121,6 @@ Full troubleshooting in
 
 ## See also
 
+- [`../docs/00-official-references.md`](../docs/00-official-references.md) — CSW 4.0 official-doc cross-reference (Istio, Calico, K8s image-pull architecture)
 - [`../docs/`](../docs/) — prerequisites, sensor types, decision matrix, rollout strategy
 - [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)

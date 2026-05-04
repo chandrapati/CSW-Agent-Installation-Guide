@@ -5,9 +5,42 @@ turning enforcement on without breaking production. This doc is
 the operating pattern for getting from *sensor installed* to
 *policy enforced* safely.
 
-> Everything here assumes the **Enforcement** sensor type (not
-> Deep Visibility). For details, see
+> **CSW 4.0 default behaviour.** By default, agents installed on
+> workloads **have the capability to enforce policy, but
+> enforcement is disabled.** You explicitly enable enforcement
+> on selected hosts in the CSW UI when you're ready. When the
+> agent enforces, it applies an ordered set of ALLOW / DROP
+> rules over source, destination, port, protocol, and direction.
+> The agent itself runs as **root on Linux** and **SYSTEM on
+> Windows** to be able to write firewall rules at the kernel.
+> Source: CSW 4.0 User Guide — see
+> [`../docs/00-official-references.md`](../docs/00-official-references.md).
+
+> Everything below assumes you've installed the **Enforcement**
+> sensor type (not Visibility-only). The agent binary is the
+> same; what differs is the cluster-side instruction to engage
+> the enforcer module. For sensor-type details see
 > [`../docs/02-sensor-types.md`](../docs/02-sensor-types.md).
+
+---
+
+## Channels established by the agent
+
+Before the rollout discussion, a quick aside on how the agent
+talks to the cluster — useful when you're tuning egress
+firewalls / proxy session limits during the rollout:
+
+| Channel | Purpose |
+|---|---|
+| WSS | Bidirectional control-plane channel (registration, configuration push) |
+| Check-in | Periodic agent health / config fetch |
+| Flow export | Telemetry stream for observed flows |
+| Enforcement | Policy fetch + enforcement ack channel |
+
+The exact connection count varies by sensor type (Visibility,
+Enforcement, Kubernetes / OpenShift). Per-IP connection-rate
+limits on egress proxies are a recurring source of intermittent
+agent disconnects during rollouts.
 
 ---
 

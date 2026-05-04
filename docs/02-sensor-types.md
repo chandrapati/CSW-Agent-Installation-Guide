@@ -4,18 +4,36 @@ CSW ships several sensor flavours. Each fits a different workload
 profile. This doc walks through all six and ends with a one-page
 decision table.
 
+> **Official sources.** Sensor type definitions and exact
+> per-platform support are in the *Cisco Secure Workload User
+> Guide* — see [`00-official-references.md`](./00-official-references.md).
+> CSW 4.0 SaaS supports agents on Linux, Windows, AIX, Solaris,
+> and Kubernetes / OpenShift platforms. Always cross-check the
+> Compatibility Matrix for your release.
+>
+> Two pages on docs.cisco.com are the canonical references for
+> what's covered below:
+>
+> - [Deploy Software Agents on Workloads (4.0 On-Prem)](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+>   — for the agent-based sensor types (Deep Visibility,
+>   Enforcement, Universal Visibility).
+> - [Configure and Manage Connectors for Secure Workload (4.0 On-Prem)](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html)
+>   — for the agentless flow-ingest paths (NetFlow, ERSPAN,
+>   AnyConnect, ISE, F5, NetScaler, Meraki, Secure Firewall, AWS,
+>   Azure, GCP, vCenter).
+
 ---
 
 ## At a glance
 
-| Sensor type | Telemetry | Enforcement | Where it runs | Sensor binary / install |
+| Sensor type | Telemetry | Enforcement | Where it runs | How it's installed |
 |---|---|---|---|---|
 | **Deep Visibility** | Flow + process + software inventory + vulnerability lookup | No (visibility only) | Linux, Windows host | `tet-sensor` package; `tetd` service |
 | **Enforcement** | Everything Deep Visibility produces | **Yes** — workload-side firewall | Linux, Windows host | `tet-sensor-enforcer` package (or feature flag depending on release); `tetd` + `tet-enforcer` services |
 | **Universal Visibility (UV)** | Flow + lighter process telemetry | No | Broader OS / kernel / arch coverage | `tet-sensor` (UV variant); user-space only |
 | **AnyConnect NVM** | Endpoint flow telemetry from user devices | No (CSW-side; endpoint may be controlled by Cisco Secure Client) | macOS, Windows, Linux laptops via Cisco Secure Client | NVM module of Cisco Secure Client |
-| **Hardware Sensor** | Flow ingest from a SPAN port (passive) | No | Network appliance / standalone server with capture NIC | CSW Hardware Sensor appliance |
-| **Cloud Sensor / Cloud Connector** | Inventory + flow logs via cloud APIs | No | Runs *in CSW*, polling AWS / Azure / GCP / vCenter; **no agent on the workload** | CSW *External Orchestrators / Connectors* configuration |
+| **NetFlow / ERSPAN ingestion** | Flow records exported by the network device (NetFlow v9 / IPFIX / ERSPAN / NSEL) | No | Connector running on a Secure Workload **Ingest Appliance**; **no agent on the workload itself** | Network device exports flows → connector receives → CSW cluster. See [Connectors](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html). |
+| **Cloud Sensor / Cloud Connector** | Inventory + flow logs via cloud APIs | No | Runs *in CSW* (or on an Ingest Appliance), polling AWS / Azure / GCP / vCenter; **no agent on the workload** | CSW *External Orchestrators / Connectors* configuration |
 
 The first two — **Deep Visibility** and **Enforcement** — cover the
 overwhelming majority of customer fleets. The other four are for
@@ -52,8 +70,10 @@ Compatibility Matrix; Windows Server 2012 R2 through current.
 **When NOT to use.**
 - The workload's OS or kernel isn't on the matrix → use
   Universal Visibility instead.
-- The workload type forbids third-party agents → use a Hardware
-  Sensor or Cloud Connector instead.
+- The workload type forbids third-party agents → use **NetFlow /
+  ERSPAN ingestion** (network-device-exported flows landing on a
+  Secure Workload Ingest Appliance) or a **Cloud Connector**
+  instead. See section 5 below.
 
 ---
 
@@ -88,11 +108,14 @@ check the matrix.
   workload-side firewall change. Stay in Deep Visibility on those
   hosts and rely on network-tier enforcement.
 
-**Operational note.** Enforcement is configured as an *agent
-profile* setting in CSW *Manage → Agent Configuration*. The agent
-binary is the same — what changes is the cluster-side instruction
-to engage the enforcer module. See
-[`../operations/07-enforcement-mode-rollout.md`](../operations/07-enforcement-mode-rollout.md).
+**Operational note.** By default, agents installed on workloads
+**have the capability to enforce policy, but enforcement is
+disabled.** You explicitly enable enforcement on selected hosts
+in the CSW UI (*Manage → Agent Configuration*). The agent binary
+is the same; what changes is the cluster-side instruction to
+engage the enforcer module. The agent itself runs in a privileged
+domain — **as root on Linux, as SYSTEM on Windows.** See
+[`../operations/07-enforcement-rollout.md`](../operations/07-enforcement-rollout.md).
 
 ---
 
@@ -107,7 +130,8 @@ specific OS / kernel combinations. UV widens the net to:
 - Older Linux (RHEL 5/6 era) where the Deep module isn't built
 - ARM64 Linux
 - Some specialised distros / niche kernels
-- Solaris / AIX tiers (per the Compatibility Matrix at your release)
+- **AIX and Solaris** — supported in CSW 4.0 SaaS (per the
+  Compatibility Matrix for your specific AIX / Solaris version)
 
 **Trade-offs vs. Deep Visibility.**
 
@@ -140,6 +164,14 @@ product formerly known as AnyConnect) — the NVM module sits
 alongside the VPN client and ships flow records per the IPFIX-style
 NVM specification.
 
+> **Important.** When NVM is in use, **no CSW agent is required
+> on the endpoint** — the AnyConnect connector in CSW registers
+> the endpoint and ingests flow observations, inventory, and
+> labels directly from NVM. Same applies to endpoints registered
+> with **Cisco ISE**, where the ISE connector via pxGrid takes
+> the place of an endpoint agent. See
+> [`05-anyconnect-ise-alternatives.md`](./05-anyconnect-ise-alternatives.md).
+
 **Why it's separate.** User-endpoint visibility has a different
 operational model than server-class visibility:
 
@@ -168,33 +200,94 @@ profile.
 
 ---
 
-## 5. Hardware Sensor
+## 5. NetFlow / ERSPAN ingestion (agentless flow for non-agent workloads)
 
-**What it does.** A dedicated CSW Hardware Sensor appliance (or
-qualified server with a capture NIC) ingests traffic from a network
-SPAN / TAP port, generates flow records from the packet stream, and
-forwards them to the CSW cluster. **Passive** — does not interact
-with the workload.
+**What it does.** For workloads that can't run a CSW host agent,
+CSW ingests **flow records exported by the network device** rather
+than instrumenting the workload itself. The network device (Catalyst
+/ Nexus switch, ASR / ISR router, ASA / FTD firewall, Meraki MX, F5
+BIG-IP, Citrix NetScaler, etc.) exports flows in a standard format
+— NetFlow v9, IPFIX, ERSPAN, or NSEL — to a **Secure Workload
+Ingest Appliance** in your DC. The matching **connector** running
+on that appliance receives the flow records, processes them, and
+reports flow observations to the CSW cluster.
 
-**Why it exists.** Some workload classes forbid agents:
+> **Official source.** [Configure and Manage Connectors for
+> Secure Workload (4.0 On-Prem)](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html).
+> The same chapter exists in the SaaS user guide. The connector
+> configuration UI in CSW lives at *Manage → External
+> Orchestrators / Connectors*.
 
-- Network appliances (load balancers, firewalls, controllers)
-- Storage appliances (SAN, NAS controllers)
-- OT systems (PLCs, RTUs, IEDs, HMIs) — never put a server agent
-  on those
+**Connectors available for flow ingestion (CSW 4.0).** All run as
+Docker containers on a Secure Workload Ingest Appliance:
+
+| Connector | Source format | Use it for |
+|---|---|---|
+| **NetFlow** | NetFlow v9 / IPFIX | Generic flow ingest from any device that can export NetFlow / IPFIX |
+| **ERSPAN** | Encapsulated Remote SPAN (GRE-tunnelled mirror) | When the device can mirror traffic but doesn't export NetFlow; close to the old "tap a SPAN port" model |
+| **Cisco Secure Firewall** (formerly ASA Connector) | NetFlow Secure Event Logging (NSEL) from ASA / FTD | Cisco Secure Firewall estate |
+| **Meraki** | NetFlow v9 from Meraki MX | Meraki SD-WAN / branch firewalls |
+| **F5** | F5 BIG-IP IPFIX | Application-tier visibility behind an F5 |
+| **NetScaler** | Citrix NetScaler AppFlow | Citrix-fronted apps |
+
+**Why this matters.** Some workload classes forbid CSW host agents:
+
+- Network appliances (load balancers, firewalls, controllers,
+  WAN-optimisers)
+- Storage / SAN / NAS controllers
+- OT systems (PLCs, RTUs, IEDs, HMIs) — never deploy a server
+  agent on these; pair this approach with OT-aware monitoring
+  (Cisco Cyber Vision, Claroty, Nozomi, Dragos)
 - Embedded medical / industrial devices
 - Workloads under change-control regimes that don't permit
   third-party software installation
 
+For all of these, the **device's own NetFlow / ERSPAN export** is
+the right CSW visibility path. You'll typically use **NetFlow** if
+the device can export it natively (most modern enterprise gear can
+— Catalyst 9000, Nexus 9000, ASR / ISR, ASA / FTD, Meraki MX, F5,
+NetScaler), and fall back to **ERSPAN** when only port-mirroring is
+available.
+
 **What you give up vs. an agent.**
 
-- No process-level attribution (only flow-level data).
+- No process-level attribution — only flow-level data (5-tuple +
+  counters, plus whatever metadata the source device adds).
 - No software inventory or CVE lookup for that workload.
-- No workload-side enforcement.
+- No workload-side enforcement (the device's own ACLs / policies
+  are still in play; CSW just ingests its flows).
 
-**Deployment model.** Mirror the relevant traffic to a SPAN
-destination port, connect the Hardware Sensor capture NIC, register
-the appliance with the cluster.
+**Deployment model.**
+
+1. Deploy a **Secure Workload Ingest Appliance** in the same
+   network zone as the source devices (the appliance receives
+   NetFlow/ERSPAN traffic, which you don't want traversing the
+   public internet or arbitrary firewalls).
+2. Enable the relevant connector on the appliance from the CSW
+   UI (*Manage → External Orchestrators / Connectors → NetFlow*
+   or *ERSPAN* or one of the vendor-specific connectors).
+3. Configure the source device to **export NetFlow / IPFIX** to
+   the appliance's IP at the connector's port (or, for ERSPAN,
+   configure a SPAN session that tunnels via GRE to the appliance).
+4. Within minutes, flows appear against the source device in the
+   CSW UI, attributed by the connector type.
+
+For the exact source-device configuration (IOS / NX-OS NetFlow
+exporter / monitor, ERSPAN session syntax, ASA NSEL config, F5
+IPFIX template, Meraki dashboard NetFlow toggle), see the per-
+connector subsections of the [Connectors chapter on
+docs.cisco.com](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html).
+
+> **Why this replaces the old "Hardware Sensor" framing.** Earlier
+> CSW / Tetration generations shipped a dedicated hardware
+> appliance with capture NICs that you wired into a SPAN / TAP
+> port and that produced flow records from the raw packet stream.
+> Modern CSW deployments instead lean on the **NetFlow / ERSPAN
+> exports the network device already produces**, processed by a
+> connector on a Secure Workload Ingest Appliance — same outcome
+> (flow visibility for workloads that can't run an agent), much
+> lower physical / cabling overhead, and on the same connector
+> framework as AnyConnect, ISE, and the cloud connectors.
 
 ---
 
@@ -250,9 +343,9 @@ Full coverage in the [`../agentless/`](../agentless/) section.
 | Windows server, supported OS, want enforcement | **Enforcement** | Deep Visibility + WFP-based enforcement |
 | Windows server, supported OS, visibility only | **Deep Visibility** | Default for Windows server-class |
 | Corporate laptop / desktop | **AnyConnect NVM** | Delivered via Cisco Secure Client |
-| Network appliance (LB, FW, controller) | **Hardware Sensor** (SPAN) | No agent permitted on appliance |
-| Storage / SAN appliance | **Hardware Sensor** (SPAN) | No agent permitted on appliance |
-| OT system (PLC, RTU, HMI) | **Hardware Sensor** (SPAN) | No agent permitted; OT-aware monitoring also recommended (Cisco Cyber Vision, Claroty, Nozomi, Dragos) |
+| Network appliance (LB, FW, controller) | **NetFlow / ERSPAN ingestion** via the appropriate connector | Use the device's own NetFlow / IPFIX / NSEL export where available; fall back to ERSPAN when only port-mirroring is supported |
+| Storage / SAN appliance | **ERSPAN** to the ERSPAN connector | Storage controllers rarely export NetFlow; mirror the storage VLAN and tunnel via GRE to the Ingest Appliance |
+| OT system (PLC, RTU, HMI) | **NetFlow / ERSPAN** from the upstream switch (not from the OT device itself) | Never put a CSW agent on an OT device; pair with an OT-aware platform — Cisco Cyber Vision, Claroty, Nozomi, Dragos |
 | Cloud workload, in active CSW scope | **Deep Visibility / Enforcement** (agent) | Agent gives process-level depth |
 | Cloud account, broad inventory needed but agent footprint capped | **Cloud Connector** (agentless) | Inventory + flow-log tier without per-VM agent |
 | Kubernetes / OpenShift node | **Deep Visibility** via DaemonSet | Standard K8s pattern |
@@ -262,7 +355,9 @@ Full coverage in the [`../agentless/`](../agentless/) section.
 
 ## See also
 
+- [`00-official-references.md`](./00-official-references.md) — Cisco's authoritative pages, including the Connectors chapter
 - [`01-prerequisites.md`](./01-prerequisites.md) — what to have before any install
 - [`03-decision-matrix.md`](./03-decision-matrix.md) — once you've picked the sensor, pick the install method
-- [`../agentless/README.md`](../agentless/README.md) — when (and when not) to use the Cloud Connector
-- [`../operations/07-enforcement-mode-rollout.md`](../operations/07-enforcement-mode-rollout.md) — promoting Deep Visibility → Enforcement safely
+- [`05-anyconnect-ise-alternatives.md`](./05-anyconnect-ise-alternatives.md) — endpoint-class agentless paths (AnyConnect NVM, ISE)
+- [`../agentless/README.md`](../agentless/README.md) — cloud / vCenter connectors (the same "no agent" pattern, but for cloud and on-prem virtualisation)
+- [`../operations/07-enforcement-rollout.md`](../operations/07-enforcement-rollout.md) — promoting Deep Visibility → Enforcement safely

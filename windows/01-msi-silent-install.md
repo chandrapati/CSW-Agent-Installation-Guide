@@ -10,15 +10,31 @@ learn what the agent installs.
 > (one host at a time but pre-configured) or one of the deployment
 > platform methods (SCCM / Intune / GPO).
 
+> **Not for VM templates / golden images.** TetSensor uses NPCAP
+> for capture; NPCAP binds to the network stack at install time
+> and **does not bind cleanly on VMs cloned from the template** —
+> capture silently fails on every clone. Install on each VM
+> post-clone via SCCM / Intune / GPO / first-boot PowerShell
+> instead. See [`README.md`](./README.md) and
+> [`../docs/00-official-references.md`](../docs/00-official-references.md).
+
 ---
 
 ## Prerequisites
 
 - All items from [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md)
+  (specifically: **local Administrator privilege**, **≥ 1 GB**
+  storage, **EDR / AV / Defender exclusions configured** —
+  Defender will otherwise block the NPCAP install or quarantine
+  the kernel filter driver, and the install will fail or run
+  partially)
 - Local administrator on the workload (the install requires it)
 - The right `.msi` file for your CSW release and sensor type,
   downloaded from the CSW *Manage → Agents → Install Agent* UI
 - For on-prem clusters: the cluster CA chain (`ca.pem`)
+- **No conflicting NPCAP install** present on the host — if an
+  unsupported NPCAP version is already installed, uninstall it
+  first so the Cisco-bundled NPCAP version installs cleanly
 
 ---
 

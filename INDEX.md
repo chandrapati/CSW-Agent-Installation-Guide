@@ -55,7 +55,7 @@
 | **Kubernetes (EKS / AKS / GKE / on-prem)** | [DaemonSet via Helm](./kubernetes/01-daemonset-helm.md); [raw manifest](./kubernetes/02-daemonset-yaml.md) for air-gapped |
 | **OpenShift** | [DaemonSet with SCC adjustments](./kubernetes/04-openshift.md) |
 | **Cloud accounts where deploying agents on every workload is impractical** | [Cloud Connector (agentless)](./agentless/README.md) for inventory + flow-log-tier visibility |
-| **Network appliances / OT systems where agents are not allowed** | [Hardware sensor](./docs/02-sensor-types.md) on a SPAN port |
+| **Network appliances / OT systems where agents are not allowed** | [NetFlow / ERSPAN ingestion](./docs/02-sensor-types.md) via the matching Secure Workload connector — see [Cisco's Connectors chapter](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html) |
 
 ---
 
@@ -63,6 +63,12 @@
 
 | If you're asking… | Start here |
 |---|---|
+| *"Where is the official Cisco documentation for CSW 4.0?"* | [docs/00-official-references.md](./docs/00-official-references.md) — links the 4.0 On-Prem and SaaS User Guides |
+| *"Which exact installer flags does CSW 4.0 ship?"* | [docs/00-official-references.md](./docs/00-official-references.md) (Linux installer flag table) |
+| *"Can I bake the Windows agent into a VM template / golden image?"* | [docs/00-official-references.md](./docs/00-official-references.md) (NPCAP cloning trap) and [windows/README.md](./windows/README.md) |
+| *"Do I need a CSW agent on AnyConnect endpoints or ISE-registered devices?"* | [docs/05-anyconnect-ise-alternatives.md](./docs/05-anyconnect-ise-alternatives.md) |
+| *"Does CSW support Istio?"* | [docs/00-official-references.md](./docs/00-official-references.md) (K8s service mesh) and [kubernetes/README.md](./kubernetes/README.md) |
+| *"What Calico version / Felix config does CSW 4.0 support?"* | [docs/00-official-references.md](./docs/00-official-references.md) (Calico 3.13 + Felix config) |
 | *"What ports do I need open and to where?"* | [operations/01-network-prereq.md](./operations/01-network-prereq.md) |
 | *"What OS versions are supported?"* | [docs/01-prerequisites.md](./docs/01-prerequisites.md) |
 | *"Which sensor type should this workload run?"* | [docs/02-sensor-types.md](./docs/02-sensor-types.md) |
@@ -77,6 +83,7 @@
 | *"What evidence do I capture before opening a TAC case?"* | [operations/08-evidence-audit.md](./operations/08-evidence-audit.md) |
 | *"What evidence does CSW produce for a compliance audit?"* | [operations/08-evidence-audit.md](./operations/08-evidence-audit.md) |
 | *"Should I deploy the host agent or use a Cloud Connector?"* | [agentless/README.md](./agentless/README.md) and [agentless/05-comparison-matrix.md](./agentless/05-comparison-matrix.md) |
+| *"How do I get visibility into network appliances / OT systems / SAN controllers that can't run a CSW agent?"* | [docs/02-sensor-types.md § 5 NetFlow / ERSPAN ingestion](./docs/02-sensor-types.md) — uses the device's own NetFlow / IPFIX / ERSPAN export landing on a Secure Workload Ingest Appliance |
 
 ---
 

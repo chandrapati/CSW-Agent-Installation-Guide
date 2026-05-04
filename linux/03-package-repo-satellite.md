@@ -290,5 +290,5 @@ Treat the CSW-published signing key like any other vendor key:
 - [`01-manual-rpm-deb.md`](./01-manual-rpm-deb.md) — what the agent does once installed
 - [`02-csw-generated-script.md`](./02-csw-generated-script.md) — alternative activation path
 - [`04-ansible.md`](./04-ansible.md) — push the repo file + install in one play
-- [`../operations/03-air-gapped-environments.md`](../operations/03-air-gapped-environments.md) — broader air-gap guidance
+- [`../operations/03-air-gapped.md`](../operations/03-air-gapped.md) — broader air-gap guidance
 - [`../operations/04-upgrade.md`](../operations/04-upgrade.md) — running upgrades through this pipeline

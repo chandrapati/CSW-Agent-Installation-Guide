@@ -131,4 +131,4 @@ The two are complementary, not exclusive.
 - [`../docs/03-decision-matrix.md`](../docs/03-decision-matrix.md)
 - [`../agentless/`](../agentless/) — Cloud Connectors
 - [`../kubernetes/`](../kubernetes/) — for K8s-on-cloud deployments
-- [`../operations/02-proxy-configuration.md`](../operations/02-proxy-configuration.md)
+- [`../operations/02-proxy.md`](../operations/02-proxy.md)

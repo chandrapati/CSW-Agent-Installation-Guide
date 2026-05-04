@@ -15,6 +15,9 @@ labs, troubleshooting, and to learn what the agent installs.
 ## Prerequisites
 
 - All items from [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md)
+  (specifically: **root or Administrator privilege**, **≥ 1 GB**
+  storage, security-tooling exclusions configured, host can
+  reach the cluster on TCP/443 with TLS pass-through)
 - Root or sudo on the workload
 - The right `.rpm` / `.deb` package file for your CSW release and
   sensor type, downloaded from the CSW *Manage → Agents → Install
@@ -122,6 +125,42 @@ sudo yum install -y ./tet-sensor-3.x.y.z-1.el7.x86_64.rpm
 
 # Amazon Linux 2023 — RHEL 9 family
 sudo dnf install -y ./tet-sensor-3.x.y.z-1.el9.x86_64.rpm
+```
+
+### Post-install — `tet-sensor` user, SELinux, PAM
+
+The package install creates a special user **`tet-sensor`** on
+the host (the runtime identity for parts of the agent that
+don't need full root):
+
+```bash
+id tet-sensor
+# Expected: uid=NNN(tet-sensor) gid=NNN(tet-sensor) groups=NNN(tet-sensor)
+```
+
+If the host is **SELinux-enforcing** or has **PAM hardening**,
+two things must hold for the agent to actually start cleanly:
+
+1. PAM must allow the `tet-sensor` user to run the agent
+   (the install drops a standard `pam.d` fragment — do not
+   strip it during host hardening).
+2. SELinux must permit execute on the agent's install path. The
+   default `/usr/local/tet/` install location is covered by the
+   SELinux policy that the package installs. **If you used
+   `--basedir=<dir>` (via the CSW-generated script) to install
+   somewhere non-standard**, you must relabel:
+
+   ```bash
+   # Replace /opt/csw with your custom basedir
+   sudo semanage fcontext -a -t bin_t '/opt/csw(/.*)?'
+   sudo restorecon -Rv /opt/csw
+   ```
+
+Confirm SELinux isn't blocking the agent post-start:
+
+```bash
+sudo ausearch -m avc -ts recent | grep -i tet
+# Expected: no AVC denials. If you see denials, fix the labels.
 ```
 
 ---

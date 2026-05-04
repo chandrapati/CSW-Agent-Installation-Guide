@@ -123,24 +123,83 @@ For deeper verification, see [`08-verification.md`](./08-verification.md).
 
 ---
 
-## Common script flags
+## Installer script — flag reference (CSW 4.0)
 
-The exact flag set varies by CSW release; the script's `--help`
-is the source of truth. Common flags you'll see:
+The CSW 4.0 Linux installer ships the following synopsis (see
+the *Cisco Secure Workload User Guide* for your edition —
+On-Prem 4.0 or SaaS 4.0 — and run `--help` on the script your
+cluster generates for the authoritative list at install time):
 
-| Flag | Purpose |
+```bash
+bash tetration_linux_installer.sh [--pre-check] [--skip-pre-check=<option>]
+  [--no-install] [--logfile=<filename>] [--proxy=<proxy_string>]
+  [--no-proxy] [--help] [--version] [--sensor-version=<version_info>]
+  [--ls] [--file=<filename>] [--save=<filename>] [--new] [--reinstall]
+  [--unpriv-user] [--force-upgrade] [--upgrade-local]
+  [--upgrade-by-uuid=<filename>] [--basedir=<basedir>]
+  [--logbasedir=<logbdir>] [--tmpdir=<tmp_dir>] [--visibility]
+  [--golden-image]
+```
+
+### Practitioner cheat-sheet
+
+| Flag | Use case |
 |---|---|
-| `--proxy <url>` | Send all agent traffic through an HTTP proxy |
-| `--proxy-user <user>` / `--proxy-password <pwd>` | Proxy auth (use a credential store, not literals in scripts) |
-| `--no-download` | Don't download the package; read it from a local path |
-| `--package-path <file>` | Path to a pre-downloaded package |
-| `--cluster-fqdn <host>` | Override the cluster destination |
-| `--ca-cert <path>` | Override the CA chain path |
-| `--scope-label <key=value>` | Add an extra label at registration time |
-| `--silent` | Non-interactive; for use in pipelines |
-| `--help` / `-h` | Show all flags for your script's release |
+| `--pre-check` | Validate prerequisites without installing — run first on the first host of any new estate |
+| `--skip-pre-check=<option>` | Skip a specific pre-check (e.g., `all`); use only when you've validated separately |
+| `--no-install` | Stage but don't actually install — useful in CI dry-runs |
+| `--logfile=<filename>` | Write installer output to a specific file |
+| `--proxy=http://proxy.example.com:8080` | Force traffic via a forward proxy |
+| `--no-proxy` | Force direct egress; explicit override of any inherited proxy env |
+| `--version` | Show the installer's bundled sensor version |
+| `--sensor-version=<version>` | Pin a specific sensor version (e.g., to roll forward in waves) |
+| `--ls` | List available sensor versions on the cluster |
+| `--file=<filename>` / `--save=<filename>` | Use / save a previously downloaded payload |
+| `--new` | Treat as a brand-new install (don't reuse prior UUID) |
+| `--reinstall` | Wipe + reinstall on a host that already has the agent |
+| `--unpriv-user` | Provision the agent's runtime user without elevated privileges (where supported) |
+| `--force-upgrade` | Upgrade even if the host is already on a supported version |
+| `--upgrade-local` | Upgrade from a local package; don't pull from the cluster |
+| `--upgrade-by-uuid=<filename>` | Upgrade only the listed UUIDs |
+| `--basedir=<dir>` | Install to a non-default base directory (see SELinux note below) |
+| `--logbasedir=<dir>` | Override the agent log directory |
+| `--tmpdir=<dir>` | Override the installer's temp directory |
+| `--visibility` | Install Visibility-only — no enforcement engaged at the kernel |
+| `--golden-image` | Install but skip first-boot activation; for baking into AMI / Compute Gallery / VM template — pair with a first-boot script in the image |
+| `--help` | Show all flags for your script's release |
 
 Always run `./install_sensor.sh --help` first if you're not sure.
+
+### SELinux + custom base directory
+
+The installer creates a special user **`tet-sensor`** on the
+host. If PAM or SELinux is configured, the `tet-sensor` user
+must be granted appropriate privileges. If you use
+`--basedir=<dir>` to install to a non-standard location and
+SELinux is enforcing, **allow execute on that location** (or
+relabel it) — otherwise the installer will succeed but the
+agent will fail to start.
+
+Quick fix for an SELinux-enforcing host with a custom base dir
+(`/opt/csw` shown — adapt to your path):
+
+```bash
+sudo semanage fcontext -a -t bin_t '/opt/csw(/.*)?'
+sudo restorecon -Rv /opt/csw
+```
+
+For PAM, ensure the system's PAM stack permits the `tet-sensor`
+user to run the agent (the install ships standard `pam.d`
+fragments — do not remove them as part of host hardening).
+
+### Golden image / AMI / VM template — Linux
+
+Use `--golden-image` when baking the agent into a base image
+(see [`../cloud/05-golden-ami.md`](../cloud/05-golden-ami.md)
+and [`../cloud/06-azure-vm-image.md`](../cloud/06-azure-vm-image.md)).
+This installs the agent and registers the systemd unit but
+**defers cluster registration to first boot** — preventing every
+cloned VM from registering with the parent VM's identity.
 
 ---
 
@@ -223,5 +282,6 @@ For deeper troubleshooting, see
 - [`01-manual-rpm-deb.md`](./01-manual-rpm-deb.md) — the manual baseline
 - [`04-ansible.md`](./04-ansible.md) — fleet rollout via Ansible
 - [`08-verification.md`](./08-verification.md) — confirm the install
-- [`../operations/02-proxy-configuration.md`](../operations/02-proxy-configuration.md) — proxy configuration
+- [`../operations/02-proxy.md`](../operations/02-proxy.md) — proxy configuration
 - [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
+- [`../docs/00-official-references.md`](../docs/00-official-references.md) — CSW 4.0 official-doc cross-reference

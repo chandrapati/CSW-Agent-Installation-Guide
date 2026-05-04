@@ -12,6 +12,43 @@ five issues:
 Get these five right before any install attempt and the rest of
 this guide goes smoothly.
 
+> **Official source.** The authoritative pre-install requirements
+> for your release are in the *Cisco Secure Workload User Guide*
+> for your edition (On-Premises 4.0 or SaaS 4.0) — see
+> [`00-official-references.md`](./00-official-references.md).
+> The five items below restate (and operationalise) the official
+> pre-install checklist for CSW 4.0.
+
+---
+
+## 0. CSW 4.0 — official pre-install requirements
+
+Restated from the CSW 4.0 User Guide (On-Prem and SaaS):
+
+- **Privilege.** Installing and running the agent service requires
+  **root (Linux/Unix) or Administrator (Windows)** privileges.
+  Non-root install paths exist for some sensor types via the
+  `--unpriv-user` installer flag — review your release's User
+  Guide before relying on them.
+- **Storage.** Reserve **at least 1 GB** for the agent and its
+  log files on each host.
+- **Security tooling exclusions.** EDR / AV / HIDS products that
+  monitor the host can block agent install or block agent
+  activity at runtime. **Configure exclusions** in those tools
+  *before* installing — the User Guide lists per-product
+  guidance (Defender, CrowdStrike, Symantec, etc.).
+- **Activation key + optional HTTPS proxy.** Agents register
+  using an activation key generated in the CSW UI; if the
+  workload egresses through a proxy, configure the proxy in the
+  user configuration file before install.
+- **Firewall + TLS.** If a firewall sits between the workload and
+  the cluster (or the host firewall is enabled), open the
+  required policy. CSW agents use TLS to reach the cluster, and
+  **any other certificate sent to the agent will fail the
+  connection** — TLS-decrypting proxies must be configured to
+  bypass the cluster FQDN. See
+  [`../operations/02-proxy.md`](../operations/02-proxy.md).
+
 ---
 
 ## 1. Network prerequisites
@@ -39,9 +76,10 @@ shows the exact destination your cluster expects.
   subnet** — security teams often forget that even an "internal"
   on-prem cluster needs an east-west exception.
 - **Egress proxies that intercept TLS** — the proxy must be
-  configured to pass-through the cluster cert, or the agent must
-  trust the proxy's MITM certificate. See
-  [`operations/02-proxy-configuration.md`](../operations/02-proxy-configuration.md).
+  configured to pass-through the cluster cert. CSW agents will
+  not trust an MITM cert; **add the cluster FQDN to the proxy's
+  bypass list**. See
+  [`../operations/02-proxy.md`](../operations/02-proxy.md).
 - **Cloud egress NAT gateways** — outbound 443 generally works, but
   some FedRAMP / regulated subnets block by default. Validate with
   `curl -v https://<cluster-vip>:443/` from the workload.
@@ -49,7 +87,7 @@ shows the exact destination your cluster expects.
   of them, not just the first one returned by DNS.
 
 Full port reference, including optional ports for advanced features,
-in [`operations/01-network-prerequisites.md`](../operations/01-network-prerequisites.md).
+in [`../operations/01-network-prereq.md`](../operations/01-network-prereq.md).
 
 ### Sensor → cluster TLS
 
@@ -128,9 +166,17 @@ Use UV when "any visibility is better than none".
 | Windows Server | 2012 R2, 2016, 2019, 2022, 2025 |
 | Windows Client | Windows 10, Windows 11 (where the platform team allows running a server-class agent on client OS) |
 
-For laptops / desktops in a user-endpoint role, the recommended
-sensor is **AnyConnect Network Visibility Module (NVM)** delivered
-via Cisco Secure Client, not the Windows Deep agent.
+For laptops / desktops in a user-endpoint role, **a CSW agent
+is not required** if either of the following is in place:
+
+- The endpoint runs **Cisco AnyConnect Secure Mobility Client
+  with the Network Visibility Module (NVM)** — registered to CSW
+  via the AnyConnect connector.
+- The endpoint is registered with **Cisco ISE** — surfaced to
+  CSW via the ISE connector through pxGrid.
+
+See [`./05-anyconnect-ise-alternatives.md`](./05-anyconnect-ise-alternatives.md)
+for the operating model.
 
 ### Containers
 
@@ -144,12 +190,31 @@ support:
 
 See [`kubernetes/`](../kubernetes/) for distribution-specific notes.
 
-### What about AIX, Solaris, mainframe?
+### AIX and Solaris
 
-Niche support exists for some of these as Universal Visibility
-targets in current releases. Check the official Compatibility
-Matrix and engage your Cisco SE if a non-x86 / non-Linux / non-
-Windows platform is in scope.
+CSW 4.0 SaaS supports agents on **AIX** and **Solaris** in
+addition to Linux, Windows, and Kubernetes / OpenShift. The
+exact AIX / Solaris versions and the supported sensor-type
+combinations are release-specific — confirm against the CSW
+4.0 User Guide and the Compatibility Matrix before committing
+those platforms to the deployment plan.
+
+### Mainframe and other niche platforms
+
+For platforms not on the Compatibility Matrix at all, the
+options are:
+
+- **NetFlow / ERSPAN ingestion** via the matching Secure Workload
+  connector (no agent on the workload — the network device's own
+  NetFlow / IPFIX / NSEL export, or an ERSPAN session, lands on a
+  Secure Workload Ingest Appliance). See the
+  [Connectors chapter on docs.cisco.com](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html)
+  and [`02-sensor-types.md` § 5](./02-sensor-types.md).
+- **Cloud / virtualisation Connector** (inventory + flow log
+  tier; no per-workload agent)
+
+Engage your Cisco SE / TAC channel for anything beyond the
+matrix.
 
 ---
 
@@ -177,8 +242,9 @@ footprint per workload:
   troubleshooting doc.
 - **Don't run the agent on appliances with strict change-control**
   — many SAN/storage appliances, network controllers, and OT
-  gateways forbid third-party agents. Use the **Hardware Sensor**
-  on a SPAN port for those.
+  gateways forbid third-party agents. Use **NetFlow / ERSPAN
+  ingestion** via the matching Secure Workload connector for
+  those (see [`02-sensor-types.md` § 5](./02-sensor-types.md)).
 
 ---
 
@@ -236,8 +302,10 @@ runbook.
 
 ## See also
 
+- [`00-official-references.md`](./00-official-references.md) — CSW 4.0 official-doc cross-reference (read first)
 - [`02-sensor-types.md`](./02-sensor-types.md) — pick the right sensor
 - [`03-decision-matrix.md`](./03-decision-matrix.md) — pick the right install method
 - [`04-rollout-strategy.md`](./04-rollout-strategy.md) — phased Monitor → Simulate → Enforce
-- [`../operations/01-network-prerequisites.md`](../operations/01-network-prerequisites.md) — exhaustive port and cert reference
+- [`05-anyconnect-ise-alternatives.md`](./05-anyconnect-ise-alternatives.md) — when no CSW agent is needed
+- [`../operations/01-network-prereq.md`](../operations/01-network-prereq.md) — exhaustive port and cert reference
 - [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) — when something goes wrong

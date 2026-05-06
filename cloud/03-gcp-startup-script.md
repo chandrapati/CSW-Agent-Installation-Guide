@@ -87,7 +87,7 @@ chmod 640 /etc/tetration/sensor.conf
 dnf install -y /tmp/tet-sensor.rpm
 
 # Start
-systemctl enable --now tetd
+systemctl enable --now csw-agent
 ```
 
 ### Setting the metadata at instance launch

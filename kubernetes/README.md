@@ -1,9 +1,29 @@
 # Kubernetes — Installation Methods
 
-Patterns for running the CSW sensor on Kubernetes (and OpenShift)
-nodes. The sensor runs as a **DaemonSet** — one privileged sensor
+Patterns for running the CSW agent on Kubernetes (and OpenShift)
+nodes. The agent runs as a **DaemonSet** — one privileged agent
 pod per node — capturing host-level network flows for both the
 node and the workload pods scheduled on it.
+
+> **Authoritative source.** The Cisco-documented installation
+> path for Kubernetes / OpenShift is the **Agent Script
+> Installer** under *Manage → Workloads → Agents → Installer*.
+> Per Cisco's
+> [Install Kubernetes or OpenShift Agents for Deep Visibility and Enforcement](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+> section, this script generates the namespace (Cisco's
+> documented namespace is **`tetration`**), RBAC, ConfigMap /
+> Secret, and DaemonSet for the cluster you point it at; nodes
+> then pull the agent image from the cluster at pod startup.
+
+> **Helm chart vs. raw manifest patterns in this folder are
+> community patterns**, not Cisco-published in the 4.0 chapter.
+> They're useful for shops that want to manage the install
+> through their existing Helm or GitOps pipelines, but: (a) the
+> Cisco-supported install path remains the Agent Script
+> Installer, and (b) the chart / manifest contents below are
+> *modelled on* what the Agent Script Installer produces — your
+> mileage in production depends on keeping them aligned with
+> what the script generates for the agent version you run.
 
 > **Architectural point.** CSW does not run a sidecar in every
 > workload pod. Telemetry is captured at the **node** level by
@@ -40,13 +60,14 @@ node and the workload pods scheduled on it.
 
 ## Methods in this folder
 
-| # | Method | Best for | Doc |
-|---|---|---|---|
-| 01 | DaemonSet via Helm chart | Standard pattern; any K8s distro | [01-daemonset-helm.md](./01-daemonset-helm.md) |
-| 02 | DaemonSet via raw manifest | Air-gapped clusters, no-Helm shops | [02-daemonset-yaml.md](./02-daemonset-yaml.md) |
-| 03 | EKS / AKS / GKE notes | Cloud K8s services | [03-eks-aks-gke.md](./03-eks-aks-gke.md) |
-| 04 | OpenShift — SCC adjustments | OpenShift / OKD clusters | [04-openshift.md](./04-openshift.md) |
-| 05 | Verification | Confirming the install actually worked | [05-verification.md](./05-verification.md) |
+| # | Method | Best for | Cisco-documented? | Doc |
+|---|---|---|---|---|
+| — | **Agent Script Installer** *(Cisco's documented method)* | Default for any K8s / OpenShift cluster | **Yes** — see Cisco's [Install Kubernetes or OpenShift Agents](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html) section | (in your cluster's UI: *Manage → Workloads → Agents → Installer*) |
+| 01 | DaemonSet via Helm chart *(community pattern)* | Shops standardised on Helm / GitOps | No | [01-daemonset-helm.md](./01-daemonset-helm.md) |
+| 02 | DaemonSet via raw manifest *(community pattern)* | Air-gapped clusters, no-Helm shops | No | [02-daemonset-yaml.md](./02-daemonset-yaml.md) |
+| 03 | EKS / AKS / GKE notes | Cloud K8s services | Partial — these are practitioner notes on top of the Cisco-documented install | [03-eks-aks-gke.md](./03-eks-aks-gke.md) |
+| 04 | OpenShift — SCC adjustments | OpenShift / OKD clusters | Cisco's chapter has an OpenShift sub-section; details here go beyond | [04-openshift.md](./04-openshift.md) |
+| 05 | Verification | Confirming the install actually worked | Practitioner guide | [05-verification.md](./05-verification.md) |
 
 ---
 
@@ -56,21 +77,27 @@ The general items in
 [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md) all
 apply, with these additions:
 
-- **Privileged pod execution.** The sensor pod needs
+- **Privileged pod execution.** The agent pod needs
   `securityContext.privileged: true`, `hostNetwork: true`,
   `hostPID: true`, and `volumeMounts` to host paths
   (`/proc`, `/sys`, `/var/log`).
 - **Pod Security Admission (PSA).** Default `restricted` profile
-  blocks privileged pods. Plan a dedicated namespace
-  (conventionally `csw-sensor`) labelled
-  `pod-security.kubernetes.io/enforce: privileged`.
-- **OpenShift / SCC.** OpenShift adds Security Context Constraints
-  on top of PSA. The sensor namespace needs the `privileged`
-  SCC bound to the sensor's ServiceAccount. See
+  blocks privileged pods. The Cisco-documented namespace for the
+  K8s install is **`tetration`** — label it
+  `pod-security.kubernetes.io/enforce: privileged`. The
+  community Helm / raw-manifest patterns in this folder use
+  `csw-sensor` for clarity in practitioner snippets, but if you
+  follow Cisco's Agent Script Installer the namespace will be
+  `tetration`.
+- **OpenShift / SCC.** OpenShift adds Security Context
+  Constraints on top of PSA. The agent namespace needs the
+  `privileged` SCC bound to the agent's ServiceAccount. See
   [04-openshift.md](./04-openshift.md).
-- **Image registry access.** The sensor image must be reachable
-  from cluster nodes. Mirror to your internal registry for
-  production and air-gapped clusters.
+- **Image registry access.** The agent image must be reachable
+  from cluster nodes. By default the cluster nodes pull the
+  image from the **CSW cluster itself** (Cisco's documented
+  flow); for air-gapped or constrained networks, mirror to an
+  internal registry.
 
 ---
 
@@ -89,14 +116,20 @@ apply, with these additions:
 
 ## Conventions used throughout
 
-| Item | Conventional value |
-|---|---|
-| Namespace | `csw-sensor` (older charts: `tetration`) |
-| ServiceAccount | `csw-sensor` |
-| ClusterRole | `csw-sensor` (read access to nodes, pods, services, namespaces) |
-| Image | from Cisco's registry; mirrored to internal registry for production |
-| DaemonSet name | `csw-sensor` |
-| Configuration source | a Secret (`csw-sensor-config`) holding cluster URL, activation key, CA chain |
+| Item | Cisco-documented (Agent Script Installer) | Community-pattern files (01, 02 in this folder) |
+|---|---|---|
+| Namespace | **`tetration`** | `csw-sensor` (chosen for practitioner clarity) |
+| ServiceAccount | (per the script's output) | `csw-sensor` |
+| ClusterRole | (per the script's output) | `csw-sensor` (read access to nodes, pods, services, namespaces) |
+| Image source | **CSW cluster itself** — nodes pull from `CFG-SERVER:443` | Mirrored to internal registry; supplied via `image.repository` override |
+| DaemonSet name | (per the script's output) | `csw-sensor` |
+| Configuration source | (per the script's output — typically a Secret + ConfigMap) | A Secret (`csw-sensor-config`) holding cluster URL, activation key, CA chain |
+
+> **In production**, the simplest correct path is: run the
+> Agent Script Installer once per cluster, capture what it
+> creates (`kubectl get all -n tetration -o yaml`), and use
+> *that* as your GitOps source of truth — not the community
+> snippets in this folder.
 
 ---
 

@@ -138,8 +138,8 @@ build {
       "sudo dnf install -y /tmp/tet-sensor.rpm",
       "sudo rm -f /tmp/tet-sensor.rpm",
 
-      "sudo systemctl disable tetd",
-      "sudo systemctl mask tetd",
+      "sudo systemctl disable csw-agent",
+      "sudo systemctl mask csw-agent",
     ]
   }
 
@@ -217,8 +217,8 @@ SCOPE=$CSW_SCOPE
 EOF
 chmod 640 /etc/tetration/sensor.conf
 
-systemctl unmask tetd
-systemctl enable --now tetd
+systemctl unmask csw-agent
+systemctl enable --now csw-agent
 
 touch /var/lib/csw-activated
 ```
@@ -320,7 +320,7 @@ distribution.
 | Packer build fails to access blob storage | Builder VM has no managed identity / wrong RBAC | Use `azure-arm` builder's `os_disk_resource_group` and assign managed identity to the builder VM; or pre-place the package on the builder via SSH provisioner |
 | Image version conflict ("VersionAlreadyExists") | Re-running with the same `image_version` | Use a CI variable that bumps `image_version` automatically (timestamp / build number) |
 | First-boot script never runs | Image deprovision didn't fire `cloud-init` | Ensure `waagent -deprovision+user` was the last build step; otherwise the image still remembers the build VM's instance state |
-| VM launched from image starts `tetd` immediately and registers as the *image build* host | `tetd` was not masked before deprovision | Mask `tetd` during the build (Pattern X above) |
+| VM launched from image starts `csw-agent` immediately and registers as the *image build* host | `csw-agent` was not masked before deprovision | Mask `csw-agent` during the build (Pattern X above) |
 | Compute Gallery distribution to other regions takes hours | Cross-region replication is asynchronous | Set `replication_regions` to all consumer regions in the Packer template |
 
 ---

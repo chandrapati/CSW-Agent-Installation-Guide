@@ -108,7 +108,7 @@ class csw_sensor (
     require  => File[$package_local_path],
   }
 
-  service { 'tetd':
+  service { 'csw-agent':
     ensure  => running,
     enable  => true,
     require => Package['tet-sensor'],
@@ -224,7 +224,7 @@ class csw_sensor::install {
     require => Class['csw_sensor::repo'],
   }
 
-  service { 'tetd':
+  service { 'csw-agent':
     ensure  => running,
     enable  => true,
     require => Package['tet-sensor'],
@@ -288,7 +288,7 @@ of hosts.
 
 The standard Puppet feedback loop covers verification:
 
-- Run reports show `Service[tetd] ensure=running` per host
+- Run reports show `Service[csw-agent] ensure=running` per host
 - PuppetDB query `select certname, value from facts where name='csw_agent_active'` (after a custom fact is added) gives a fleet view
 - Combined with the CSW UI's *Manage → Agents* sensor health
   view, you have two-source confirmation
@@ -299,7 +299,7 @@ A custom fact for sensor health:
 # lib/facter/csw_agent_active.rb
 Facter.add(:csw_agent_active) do
   setcode do
-    Facter::Core::Execution.execute('systemctl is-active tetd', timeout: 5).strip == 'active'
+    Facter::Core::Execution.execute('systemctl is-active csw-agent', timeout: 5).strip == 'active'
   end
 end
 ```

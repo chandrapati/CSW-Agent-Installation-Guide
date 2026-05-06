@@ -15,11 +15,11 @@ Run these commands on the workload after install:
 
 ```bash
 # 1. Service is active
-systemctl is-active tetd
+systemctl is-active csw-agent
 # Expected: active
 
 # 2. Service is enabled at boot
-systemctl is-enabled tetd
+systemctl is-enabled csw-agent
 # Expected: enabled
 
 # 3. Process tree
@@ -59,23 +59,23 @@ rpm -ql tet-sensor | head -50
 dpkg -L tet-sensor | head -50
 ```
 
-### 2. Confirm `tetd` is running and enabled
+### 2. Confirm `csw-agent` is running and enabled
 
 ```bash
-sudo systemctl status tetd
+sudo systemctl status csw-agent
 ```
 
 Expected output (key lines):
 
 ```
-● tetd.service - Cisco Secure Workload sensor
-     Loaded: loaded (/usr/lib/systemd/system/tetd.service; enabled; preset: ...)
+● csw-agent.service - Cisco Secure Workload sensor
+     Loaded: loaded (/usr/lib/systemd/system/csw-agent.service; enabled; preset: ...)
      Active: active (running) since <timestamp>
    Main PID: <pid> (tet-sensor)
       Tasks: <n>
      Memory: <m>M
         CPU: <t>s
-     CGroup: /system.slice/tetd.service
+     CGroup: /system.slice/csw-agent.service
              ├─<pid> /usr/local/tet/tet-sensor
              └─<pid> /usr/local/tet/tet-engine
 ```
@@ -141,7 +141,7 @@ In the **CSW UI**:
 
 1. *Investigate → Flows*
 2. Filter by the workload's IP or hostname
-3. Within ~2 minutes of `tetd` starting, you should see flows
+3. Within ~2 minutes of `csw-agent` starting, you should see flows
 
 If the host is registered but no flows appear after 5+ minutes:
 
@@ -190,17 +190,17 @@ else
 fi
 
 # 2. Service active
-if systemctl is-active --quiet tetd; then
-  mark_pass "tetd service active"
+if systemctl is-active --quiet csw-agent; then
+  mark_pass "csw-agent service active"
 else
-  mark_fail "tetd service not active"
+  mark_fail "csw-agent service not active"
 fi
 
 # 3. Service enabled
-if systemctl is-enabled --quiet tetd; then
-  mark_pass "tetd service enabled at boot"
+if systemctl is-enabled --quiet csw-agent; then
+  mark_pass "csw-agent service enabled at boot"
 else
-  mark_warn "tetd service not enabled at boot"
+  mark_warn "csw-agent service not enabled at boot"
 fi
 
 # 4. Recent connection on 443
@@ -255,7 +255,7 @@ after install)".
 ### "Service flapping (running → failed → running)"
 
 1. Check for kernel module compile failures:
-   `dmesg | grep -i tet` or `journalctl -u tetd | grep -i kernel`
+   `dmesg | grep -i tet` or `journalctl -u csw-agent | grep -i kernel`
 2. Confirm `kernel-headers` matches `uname -r`
 3. Confirm OS / kernel are on the [Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html)
    for the installed agent version

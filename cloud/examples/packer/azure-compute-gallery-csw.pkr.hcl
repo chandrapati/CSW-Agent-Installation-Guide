@@ -1,6 +1,6 @@
 # Example Packer template — bake CSW agent into an Azure Compute Gallery image.
 #
-# Pattern X (deferred activation): the agent package is installed and `tetd`
+# Pattern X (deferred activation): the agent package is installed and `csw-agent`
 # is masked at build time; activation happens at first boot via a one-shot
 # systemd unit that pulls the activation key from Key Vault using the
 # instance's managed identity.
@@ -67,7 +67,7 @@ build {
       "curl -fsSL '${var.csw_ca_url}'  -o /tmp/ca.pem",
       "sudo install -m 0644 /tmp/ca.pem /etc/tetration/ca.pem",
       "sudo dnf -y install /tmp/tet-sensor.rpm",
-      "sudo systemctl mask tetd  # deferred — activated at first boot",
+      "sudo systemctl mask csw-agent  # deferred — activated at first boot",
       "sudo rm -f /tmp/tet-sensor.rpm /tmp/ca.pem",
     ]
   }

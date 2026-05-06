@@ -63,17 +63,17 @@ sudo -E ./install_sensor.sh
 ### On an already-installed agent
 
 ```bash
-sudo systemctl stop tetd
+sudo systemctl stop csw-agent
 
 sudo tee /usr/local/tet/conf/proxy.conf >/dev/null <<EOF
 HTTPS_PROXY_HOST=proxy.internal.example.com
 HTTPS_PROXY_PORT=8080
 EOF
 
-sudo systemctl start tetd
+sudo systemctl start csw-agent
 
 # Confirm
-sudo journalctl -u tetd --since "5 minutes ago" | grep -i proxy
+sudo journalctl -u csw-agent --since "5 minutes ago" | grep -i proxy
 ```
 
 ### Bypass list (non-proxied destinations)
@@ -96,7 +96,7 @@ The Windows sensor reads proxy settings from a config under
 
 ```powershell
 # Stop the service
-Stop-Service TetSensor
+Stop-Service CswAgent
 
 # Write the proxy config
 $cfg = @"
@@ -106,7 +106,7 @@ HTTPS_PROXY_PORT=8080
 Set-Content -Path "$env:PROGRAMDATA\Cisco\Tetration\proxy.conf" -Value $cfg
 
 # Start the service
-Start-Service TetSensor
+Start-Service CswAgent
 
 # Confirm
 Get-EventLog -LogName Application -Source TetSensor -Newest 10 |
@@ -187,7 +187,7 @@ for this kind of mTLS-bound traffic.
 
 ```bash
 # Linux
-sudo journalctl -u tetd --since "10 minutes ago" | grep -E "(proxy|cluster)"
+sudo journalctl -u csw-agent --since "10 minutes ago" | grep -E "(proxy|cluster)"
 
 # Windows
 Get-EventLog -LogName Application -Source TetSensor -Newest 30 |

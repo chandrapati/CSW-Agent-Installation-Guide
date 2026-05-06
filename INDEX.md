@@ -14,8 +14,8 @@
 | **Ubuntu / Debian** | [Manual DEB](./linux/01-manual-rpm-deb.md) · [CSW shell script](./linux/02-csw-generated-script.md) · [APT repo](./linux/03-package-repo-satellite.md) | [Ansible](./linux/04-ansible.md) · [Puppet](./linux/05-puppet.md) · [Chef](./linux/06-chef.md) · [Salt](./linux/07-saltstack.md) |
 | **SUSE / SLES** | [Manual RPM (zypper)](./linux/01-manual-rpm-deb.md) · [CSW shell script](./linux/02-csw-generated-script.md) | [Ansible](./linux/04-ansible.md) · [Puppet](./linux/05-puppet.md) |
 | **Windows Server / Windows Client** | [Manual MSI](./windows/01-msi-silent-install.md) · [CSW PowerShell script](./windows/02-csw-generated-powershell.md) | [SCCM](./windows/03-sccm-deployment.md) · [Intune](./windows/04-intune-deployment.md) · [GPO](./windows/05-group-policy.md) · [Ansible (WinRM)](./linux/04-ansible.md) |
-| **AIX / Solaris / non-x86** | Universal Visibility (UV) sensor — see [sensor types](./docs/02-sensor-types.md) | Same OS-native packaging as above where supported |
-| **macOS (laptops)** | AnyConnect NVM — see [sensor types](./docs/02-sensor-types.md) | MDM-based deployment of Cisco Secure Client |
+| **AIX / Solaris** | CSW 4.0 ships **AIX** and **Solaris** agents (Deep Visibility + Enforcement) — see [Cisco's *Install AIX Agents*](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html) and *Install Solaris Agents* sections | Same agent script installer pattern as Linux |
+| **macOS / iOS / Android (endpoints)** | AnyConnect NVM via Cisco Secure Client (no CSW agent on the endpoint) — see [sensor types](./docs/02-sensor-types.md) | MDM-based deployment of Cisco Secure Client; AnyConnect connector on the CSW side |
 
 ---
 
@@ -32,7 +32,7 @@
 | **Group Policy (GPO)** | n/a | [windows/05-group-policy.md](./windows/05-group-policy.md) | Fallback when SCCM / Intune are not available |
 | **Terraform** | [cloud/04-terraform.md](./cloud/04-terraform.md) | [cloud/04-terraform.md](./cloud/04-terraform.md) | Embed agent in `user_data` / `custom_data` |
 | **Packer** | [cloud/05-golden-ami.md](./cloud/05-golden-ami.md) | [cloud/05-golden-ami.md](./cloud/05-golden-ami.md) | Bake agent into the base image |
-| **Helm (K8s)** | [kubernetes/01-daemonset-helm.md](./kubernetes/01-daemonset-helm.md) | n/a | Standard pattern for Kubernetes |
+| **Helm (K8s)** | [kubernetes/01-daemonset-helm.md](./kubernetes/01-daemonset-helm.md) | n/a | Community / internally-maintained pattern. **Cisco's documented K8s install method is the Agent Script Installer** (it provisions namespace, RBAC, and DaemonSet for you) — see [kubernetes/02-daemonset-yaml.md](./kubernetes/02-daemonset-yaml.md) and the [Install Kubernetes or OpenShift Agents](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html) section of the CSW 4.0 User Guide. |
 | **Cloud-init** | [cloud/01-aws-userdata.md](./cloud/01-aws-userdata.md) · [cloud/02-azure-customdata.md](./cloud/02-azure-customdata.md) · [cloud/03-gcp-startup-script.md](./cloud/03-gcp-startup-script.md) | Same | First-boot install on cloud VMs |
 
 ---
@@ -52,7 +52,7 @@
 | **AWS EC2** | [user_data via Terraform](./cloud/01-aws-userdata.md) for new launches; [Golden AMI / Packer](./cloud/05-golden-ami.md) for fleet scale |
 | **Azure VMs** | [custom_data / cloud-init](./cloud/02-azure-customdata.md); [Compute Gallery image](./cloud/06-azure-vm-image.md) for fleet scale |
 | **GCP Compute Engine** | [Startup script via instance metadata](./cloud/03-gcp-startup-script.md); custom image for fleet scale |
-| **Kubernetes (EKS / AKS / GKE / on-prem)** | [DaemonSet via Helm](./kubernetes/01-daemonset-helm.md); [raw manifest](./kubernetes/02-daemonset-yaml.md) for air-gapped |
+| **Kubernetes (EKS / AKS / GKE / on-prem)** | [Agent Script Installer (Cisco-documented)](./kubernetes/02-daemonset-yaml.md); [Helm chart (community pattern)](./kubernetes/01-daemonset-helm.md) when your shop maintains its own chart |
 | **OpenShift** | [DaemonSet with SCC adjustments](./kubernetes/04-openshift.md) |
 | **Cloud accounts where deploying agents on every workload is impractical** | [Cloud Connector (agentless)](./agentless/README.md) for inventory + flow-log-tier visibility |
 | **Network appliances / OT systems where agents are not allowed** | [NetFlow / ERSPAN ingestion](./docs/02-sensor-types.md) via the matching Secure Workload connector — see [Cisco's Connectors chapter](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html) |
@@ -65,7 +65,7 @@
 |---|---|
 | *"Where is the official Cisco documentation for CSW 4.0?"* | [docs/00-official-references.md](./docs/00-official-references.md) — links the 4.0 On-Prem and SaaS User Guides |
 | *"Which exact installer flags does CSW 4.0 ship?"* | [docs/00-official-references.md](./docs/00-official-references.md) (Linux installer flag table) |
-| *"Can I bake the Windows agent into a VM template / golden image?"* | [docs/00-official-references.md](./docs/00-official-references.md) (NPCAP cloning trap) and [windows/README.md](./windows/README.md) |
+| *"Can I bake the Windows agent into a VM template / golden image?"* | **Yes** — Cisco documents the path. Use `-goldenImage` (PowerShell installer) or `nostart=yes` (MSI installer); see [docs/00-official-references.md](./docs/00-official-references.md) (Windows VDI / golden-image flow) and [windows/README.md](./windows/README.md). |
 | *"Do I need a CSW agent on AnyConnect endpoints or ISE-registered devices?"* | [docs/05-anyconnect-ise-alternatives.md](./docs/05-anyconnect-ise-alternatives.md) |
 | *"Does CSW support Istio?"* | [docs/00-official-references.md](./docs/00-official-references.md) (K8s service mesh) and [kubernetes/README.md](./kubernetes/README.md) |
 | *"What Calico version / Felix config does CSW 4.0 support?"* | [docs/00-official-references.md](./docs/00-official-references.md) (Calico 3.13 + Felix config) |

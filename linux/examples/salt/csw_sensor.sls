@@ -75,7 +75,7 @@ tet-sensor:
     - require:
       - file: /etc/tetration/sensor.conf
 
-tetd:
+csw-agent:
   service.running:
     - enable: true
     - require:

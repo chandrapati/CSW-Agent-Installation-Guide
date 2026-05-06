@@ -82,9 +82,9 @@ build {
       "sudo aws s3 cp ${var.csw_ca_s3_uri} /etc/tetration/ca.pem",
       "sudo dnf install -y /tmp/tet-sensor.rpm",
       "sudo rm -f /tmp/tet-sensor.rpm",
-      # Mask tetd so the build VM does NOT register itself with the cluster
-      "sudo systemctl disable tetd",
-      "sudo systemctl mask tetd",
+      # Mask csw-agent so the build VM does NOT register itself with the cluster
+      "sudo systemctl disable csw-agent",
+      "sudo systemctl mask csw-agent",
     ]
   }
 
@@ -105,8 +105,8 @@ build {
       "SCOPE=$CSW_SCOPE",
       "EOF",
       "chmod 640 /etc/tetration/sensor.conf",
-      "systemctl unmask tetd",
-      "systemctl enable --now tetd",
+      "systemctl unmask csw-agent",
+      "systemctl enable --now csw-agent",
       "touch /var/lib/csw-activated",
       "SCRIPT",
 
@@ -138,7 +138,7 @@ build {
       "rpm -q tet-sensor",
       "ls -la /etc/tetration/",
       "systemctl is-enabled csw-first-boot.service",
-      "systemctl is-enabled tetd || true",   # masked, ok
+      "systemctl is-enabled csw-agent || true",   # masked, ok
     ]
   }
 }

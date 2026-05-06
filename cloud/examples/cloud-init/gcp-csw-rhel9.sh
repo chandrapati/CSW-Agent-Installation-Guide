@@ -47,7 +47,7 @@ EOF
 chmod 640 /etc/tetration/sensor.conf
 
 dnf install -y /tmp/tet-sensor.rpm
-systemctl enable --now tetd
+systemctl enable --now csw-agent
 
 rm -f /tmp/tet-sensor.rpm
 touch /var/lib/csw-installed

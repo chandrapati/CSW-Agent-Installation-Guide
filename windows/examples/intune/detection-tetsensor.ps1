@@ -11,7 +11,7 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
 # Service must exist
-$svc = Get-Service -Name 'TetSensor'
+$svc = Get-Service -Name 'CswAgent'
 if ($null -eq $svc) {
     exit 1
 }
@@ -24,8 +24,8 @@ if ($svc.Status -ne 'Running') {
 # Optional: confirm the binary is on disk in the expected location.
 # Adjust the path to match your CSW release's install layout.
 $binaryCandidates = @(
-    "$env:ProgramFiles\Cisco Tetration\TetSensor.exe",
-    "$env:ProgramFiles\Cisco\Tetration\TetSensor.exe"
+    "$env:ProgramFiles\Cisco Tetration\TetSensor.exe",  # Note: legacy filename; newer agents use CswEngine.exe
+    "$env:ProgramFiles\Cisco\Tetration\TetSensor.exe" # Note: legacy filename; newer agents use CswEngine.exe
 )
 $binaryFound = $false
 foreach ($p in $binaryCandidates) {
@@ -38,5 +38,5 @@ if (-not $binaryFound) {
     exit 1
 }
 
-Write-Output "Cisco Secure Workload sensor detected: TetSensor service is Running"
+Write-Output "Cisco Secure Workload agent detected: CswAgent service is Running"
 exit 0

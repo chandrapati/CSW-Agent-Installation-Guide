@@ -96,14 +96,14 @@ The script:
 6. Installs the package via `rpm` / `dpkg`
 7. Writes the cluster URL and activation key to
    `/etc/tetration/sensor.conf` (or release-equivalent)
-8. Starts and enables the `tetd` service
+8. Starts and enables the `csw-agent` service
 9. Registers with the cluster
 
 Expected end-of-run output (paraphrased):
 
 ```
 [INFO] Sensor installation complete
-[INFO] Service tetd started and enabled
+[INFO] Service csw-agent started and enabled
 [INFO] Sensor registered with cluster <cluster-vip>
 [INFO] Workload UUID: <uuid>
 ```
@@ -245,7 +245,7 @@ log out of the box.
 |---|---|---|
 | Script exits with `download failed: cannot reach <cluster>` | Workload can't reach the cluster on 443/TCP | Test with `curl -v https://<cluster>:443/`; open the firewall port; or pre-download the package and pass `--no-download --package-path /tmp/pkg.rpm` |
 | Script reports `OS not supported` | OS / kernel not on the matrix for this CSW release | Check the [Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html); consider Universal Visibility for niche kernels |
-| `tetd` started but registration is *Not Active* in UI | Outbound 443 reaches the cluster but the activation key was rejected | Regenerate the script in the UI (the key may have been rotated); rerun |
+| `csw-agent` started but registration is *Not Active* in UI | Outbound 443 reaches the cluster but the activation key was rejected | Regenerate the script in the UI (the key may have been rotated); rerun |
 | Registers under wrong scope | Script was generated for a different scope | Regenerate for the correct scope; or move the workload in the UI by changing the scope label |
 | Hangs at "validating package signature" | Time skew | `chronyc tracking` / `timedatectl` to confirm clock sync |
 

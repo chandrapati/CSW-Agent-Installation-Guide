@@ -13,8 +13,8 @@ Sensor installs cleanly?
   no  → check package install logs (yum / apt / msiexec verbose)
   yes ↓
 Service running?
-  no  → systemctl status tetd  (Linux) / Get-Service TetSensor (Windows)
-        → check journalctl -u tetd / Application Event Log
+  no  → systemctl status csw-agent  (Linux) / Get-Service CswAgent (Windows)
+        → check journalctl -u csw-agent / Application Event Log
   yes ↓
 Host can resolve cluster FQDN?
   no  → fix DNS; see operations/01-network-prereq.md
@@ -93,8 +93,8 @@ that imply a tight retry loop (DNS resolve, TLS handshake)
 
 Linux:
 ```bash
-sudo systemctl status tetd
-sudo journalctl -u tetd --since "1 hour ago" | tail -100
+sudo systemctl status csw-agent
+sudo journalctl -u csw-agent --since "1 hour ago" | tail -100
 ```
 
 Look for:

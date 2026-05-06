@@ -29,7 +29,7 @@ csw_sensor/
 ├── init.sls                 # entry point — selects pattern A or B
 ├── repo.sls                 # internal repo source (Pattern B)
 ├── install.sls              # install + activation
-├── service.sls              # ensure tetd running
+├── service.sls              # ensure csw-agent running
 ├── files/
 │   ├── sensor.conf.jinja    # rendered to /etc/tetration/sensor.conf
 │   └── (tet-sensor packages for Pattern A)
@@ -156,7 +156,7 @@ tet-sensor:
 include:
   - csw_sensor.install
 
-tetd:
+csw-agent:
   service.running:
     - enable: true
     - require:
@@ -245,7 +245,7 @@ import subprocess
 
 def csw_sensor_active():
     try:
-        out = subprocess.run(['systemctl', 'is-active', 'tetd'], capture_output=True, text=True, timeout=5)
+        out = subprocess.run(['systemctl', 'is-active', 'csw-agent'], capture_output=True, text=True, timeout=5)
         return {'csw_sensor_active': out.stdout.strip() == 'active'}
     except Exception:
         return {'csw_sensor_active': False}

@@ -55,20 +55,36 @@ Restated from the CSW 4.0 User Guide (On-Prem and SaaS):
 
 ### Required outbound connectivity
 
-The host agent (any sensor type) needs outbound TCP connectivity to
-the CSW cluster. Default ports:
+The host agent (any sensor type) needs outbound TCP connectivity
+to the CSW cluster. **The exact port set depends on whether you
+run on-premises or SaaS** — Cisco's *Connectivity Information*
+table (Deploy Software Agents, Table 2) specifies:
+
+| Agent type | Config server | Collectors | Enforcement back-end |
+|---|---|---|---|
+| Visibility (on-premises) | `CFG-SERVER:443/TCP` | `COLLECTOR:5640/TCP` | n/a |
+| Visibility (SaaS) | `CFG-SERVER:443/TCP` | `COLLECTOR:443/TCP` | n/a |
+| Enforcement (on-premises) | `CFG-SERVER:443/TCP` | `COLLECTOR:5640/TCP` | `ENFORCER:5660/TCP` |
+| Enforcement (SaaS) | `CFG-SERVER:443/TCP` | `COLLECTOR:443/TCP` | `ENFORCER:443/TCP` |
+
+Plus, in every deployment:
 
 | Direction | Source | Destination | Port | Purpose |
 |---|---|---|---|---|
-| Outbound | Each workload | CSW collector VIP | 443/TCP | Sensor → cluster: registration, telemetry upload, policy fetch, software updates |
-| Outbound | Each workload | CSW NTP source (cluster or org NTP) | 123/UDP | Time sync (clock skew breaks TLS) |
-| Outbound | Each workload | DNS resolver | 53/UDP, 53/TCP | Resolve cluster hostname |
+| Outbound | Each workload | NTP source (cluster or org NTP) | 123/UDP | Time sync (clock skew breaks TLS) |
+| Outbound | Each workload | DNS resolver | 53/UDP, 53/TCP | Resolve cluster hostnames |
 
-For SaaS clusters (Cisco-hosted) the destination is a public
-hostname; for on-prem clusters it's typically the **collector VIP**
-exposed on a dedicated cluster interface. Check the CSW UI under
-*Manage → Agents → Install Agent* — the install screen always
-shows the exact destination your cluster expects.
+Cisco's note: *"Deep visibility and enforcement agents connect
+to all available collectors. The enforcement agent connects to
+only one of the available endpoints."* For on-prem clusters
+with HA, open egress to **every** collector / enforcer IP —
+not just the first one returned by DNS.
+
+You'll find the config-server IP at *Platform → Cluster
+Configuration → Sensor VIP* and the collector / enforcer IPs
+under *External IPs*. The CSW UI under *Manage → Workloads →
+Agents → Installer* always reflects the exact destinations
+your cluster expects.
 
 ### Common firewall gotchas
 
@@ -91,28 +107,51 @@ in [`../operations/01-network-prereq.md`](../operations/01-network-prereq.md).
 
 ### Sensor → cluster TLS
 
-The agent validates the cluster's TLS certificate using the CA
-chain bundled in the agent installer. For on-prem clusters that use
-an internal CA:
+Per Cisco's chapter intro: *"Secure Workload agents use TLS to
+secure the TCP connections to the Secure Workload Cloud SaaS
+servers. The sensor validates the TLS certificate from the
+Secure Workload Cloud control, data, and enforcement servers
+**against a local CA installed with the agent**. Any other
+certificate sent to the agent will result in connection failure."*
 
-- The CSW-generated installer (the most common method) **embeds
-  the cluster CA chain automatically**. This is why the CSW shell
-  script / PowerShell script approach is preferred over a vendor
-  package and a separate config step.
-- For manual RPM/DEB/MSI installs, you may need to deposit the CA
-  chain in `/etc/tetration/ca.pem` (Linux) or
-  `%PROGRAMDATA%\Cisco\Tetration\conf\ca.pem` (Windows) per the
-  install guide. The CSW *Manage → Agents* UI shows the exact
-  filename and location for your cluster.
+In practice this means:
 
-If TLS handshake fails, the agent log will say so explicitly:
+- The CSW-generated installer (Agent Script Installer — the most
+  common method) **bundles the CA chain automatically**. This is
+  the recommended path; it's why Cisco's chapter recommends the
+  script installer over the manual image/MSI installer for
+  almost all deployments.
+- For manual image / MSI installs, the CA certificate ships in
+  the package as `ca.cert` (per Cisco's *Install Windows Agent
+  using the Agent Image Installer Method* section: *"`ca.cert` —
+  Mandatory — CA certificate for sensor communications."*).
+  Linux RPM / DEB / TGZ packages include the equivalent file.
+  The exact filename and per-OS location are documented in your
+  cluster's *Manage → Workloads → Agents → Installer →
+  Agent Image Installer* screen — the screen text is generated
+  for your specific cluster version, and is the authoritative
+  source for filename and location.
+- TLS-decrypting / SSL-inspecting proxies must be configured to
+  **bypass the cluster FQDN.** Per Cisco: *"Proxy Configuration:
+  Configure explicit or transparent web proxies to bypass
+  SSL/TLS decryption for agent communications. If bypass rules
+  are not configured, proxies may attempt to decrypt SSL/TLS
+  traffic by sending their own certificate to the agent. Since
+  the agent only uses its local CA to validate certificates,
+  proxy certificates will cause connection failures."*
+  See [`../operations/02-proxy.md`](../operations/02-proxy.md).
+
+If TLS handshake fails, the agent log will say so explicitly
+(typical pattern; exact wording depends on release):
 
 ```
 [ERROR] tls handshake failed: x509: certificate signed by unknown authority
 ```
 
-Fix path: confirm `ca.pem` is present and matches the cluster CA;
-restart the agent service.
+Fix path: confirm the CA cert that shipped with the installer
+is in place under the agent's install directory and matches the
+cluster CA; restart the agent service (`systemctl restart
+csw-agent` on Linux, `Restart-Service CswAgent` on Windows).
 
 ---
 

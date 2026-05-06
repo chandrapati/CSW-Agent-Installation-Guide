@@ -44,7 +44,7 @@ Key Vault).
 - **Pro:** the image doesn't carry an embedded activation key
   (smaller blast radius if the AMI leaks)
 - **Con:** still a small first-boot step (read SSM, write
-  sensor.conf, restart `tetd`)
+  sensor.conf, restart `csw-agent`)
 
 ### Pattern Y — Activate during image build
 
@@ -148,13 +148,13 @@ build {
       "sudo rm -f /tmp/tet-sensor.rpm",
 
       # Disable the service so it doesn't start until first boot's user_data writes sensor.conf
-      "sudo systemctl disable tetd",
-      "sudo systemctl mask tetd",
+      "sudo systemctl disable csw-agent",
+      "sudo systemctl mask csw-agent",
     ]
   }
 
   # Drop a first-boot oneshot service that reads sensor.conf from cloud-init,
-  # then unmasks and starts tetd.
+  # then unmasks and starts csw-agent.
   provisioner "file" {
     source      = "files/csw-first-boot.sh"
     destination = "/tmp/csw-first-boot.sh"
@@ -197,7 +197,7 @@ build {
 ```bash
 #!/bin/bash
 # CSW first-boot activation script.
-# Reads activation key from SSM, writes sensor.conf, starts tetd.
+# Reads activation key from SSM, writes sensor.conf, starts csw-agent.
 
 set -euxo pipefail
 exec > /var/log/csw-first-boot.log 2>&1
@@ -224,8 +224,8 @@ SCOPE=$CSW_SCOPE
 EOF
 chmod 640 /etc/tetration/sensor.conf
 
-systemctl unmask tetd
-systemctl enable --now tetd
+systemctl unmask csw-agent
+systemctl enable --now csw-agent
 
 touch /var/lib/csw-activated
 ```
@@ -336,8 +336,8 @@ provisioner "shell" {
     "SCOPE=prod:web-tier",
     "EOF",
     "sudo chmod 640 /etc/tetration/sensor.conf",
-    "sudo systemctl enable tetd",
-    # Don't start tetd during build — let it activate at instance launch
+    "sudo systemctl enable csw-agent",
+    # Don't start csw-agent during build — let it activate at instance launch
     # (otherwise the build instance also registers, polluting the cluster)
   ]
 }
@@ -352,10 +352,10 @@ activation key. Restrict `ami_users` / sharing accordingly.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Packer build registers the agent against the cluster | `tetd` started during build | Mask the service before the build provisioner starts (see Pattern X above); use Pattern X instead of Y |
-| Image build succeeds but instances launched from it never start `tetd` | `csw-first-boot.service` failed silently | Check `/var/log/csw-first-boot.log` on a launched instance; usually a missing tag or SSM permission |
+| Packer build registers the agent against the cluster | `csw-agent` started during build | Mask the service before the build provisioner starts (see Pattern X above); use Pattern X instead of Y |
+| Image build succeeds but instances launched from it never start `csw-agent` | `csw-first-boot.service` failed silently | Check `/var/log/csw-first-boot.log` on a launched instance; usually a missing tag or SSM permission |
 | AMI reaches consumer accounts but `aws ssm get-parameter` fails | The launching account can't read the activation key parameter | Move the parameter to the launching account's SSM (or use cross-account parameter access via Resource Access Manager) |
-| Sensor inventory shows the build instance as a registered host | Same as gotcha 1 | Mask `tetd` during build; deregister the build instance from CSW UI |
+| Sensor inventory shows the build instance as a registered host | Same as gotcha 1 | Mask `csw-agent` during build; deregister the build instance from CSW UI |
 | Image build fails on `kernel-headers` mismatch | Build instance kernel doesn't match the headers package | Pin the kernel during the build (`dnf install kernel-X.Y.Z-N`); or run `dnf upgrade -y && reboot` before installing the agent |
 
 ---

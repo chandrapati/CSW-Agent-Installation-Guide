@@ -1,30 +1,81 @@
 # Windows — Installation Methods
 
-Pick the runbook that matches your environment. All methods produce
-the same end-state: the CSW Windows agent (`TetSensor.msi`)
-installed, running as a Windows service (binary name
-`tetsen.exe`), and registered against the CSW cluster.
+Pick the runbook that matches your environment. All methods
+produce the same end-state: the CSW Windows agent installed
+running as the **`CswAgent`** Windows service (display name
+"Cisco Secure Workload Deep Visibility"; the underlying agent
+process is `CswEngine.exe`, with `TetEnfC.exe` engaged on
+enforcement-enabled hosts), and registered against the CSW
+cluster.
+
+> **Authoritative source.** Service / process / VDI / Npcap
+> claims on this page come directly from Cisco's
+> [Install Windows Agents for Deep Visibility and Enforcement](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/install-windows-agents-for-deep-visibility-and-enforcement.html)
+> chapter and the
+> [Post Installation Tasks and Details for Software Agents](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/post-installation-tasks-and-details-for-software-agents.html)
+> chapter (Security Exclusions Table 3). If your release
+> differs, trust the *Manage → Workloads → Agents → Installer*
+> screen in your cluster.
+
+> **Naming note — `TetSensor` vs. `CswAgent`.** Cisco renamed
+> the user-facing Windows service from the Tetration-era
+> `TetSensor` to `CswAgent` in current CSW releases. Older
+> documentation, scripts, and Tetration-era runbooks reference
+> `TetSensor`; on a fresh CSW 4.x install you'll manage
+> `CswAgent`. Where this guide previously said `TetSensor`, the
+> current value is `CswAgent`. The MSI filename has also
+> evolved; check the *Manage → Workloads → Agents → Installer*
+> screen for the exact filename your release ships.
 
 > **Before any of these methods**, confirm
-> [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md) is
-> satisfied. Most install failures trace back to a prerequisite gap,
-> not the method itself.
+> [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md)
+> is satisfied. Most install failures trace back to a
+> prerequisite gap, not the method itself.
 
-> **Critical — read before any deployment that uses VM templates,
-> Citrix MCS / PVS, VMware Instant Clones, or AWS / Azure / GCP
-> golden images.** The Windows TetSensor service captures network
-> flows using **NPCAP**. NPCAP binds to the network stack at
-> install time. **When a new VM is cloned from a template that
-> already has TetSensor installed, NPCAP does not bind cleanly to
-> the cloned VM's network stack** — capture silently fails on the
-> clones. There is no Windows equivalent of the Linux
-> `--golden-image` installer flag at this writing. The official
-> guidance is to **install TetSensor as a post-clone step** (SCCM,
-> Intune, GPO startup script, or a first-boot PowerShell
-> invocation of the CSW PowerShell installer) rather than baking
-> it into the template. See
-> [`../docs/00-official-references.md`](../docs/00-official-references.md)
-> for the User Guide reference.
+> **For VDI / VM-template / golden-image deployments — there
+> *is* a Cisco-supported path.** Cisco's *Install Windows
+> Agent in a VDI Instance or VM Template* section documents
+> exact MSI / PowerShell flags that prevent the build VM from
+> registering with the cluster, then activate cleanly when
+> a clone boots. See the next section.
+
+---
+
+## VDI / VM template / golden image — Cisco's documented flow
+
+Per Cisco's
+[Install Windows Agent using the Agent Image Installer Method](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/install-windows-agents-for-deep-visibility-and-enforcement.html),
+the supported VDI / VM template flow is:
+
+| Installer | Flag | What it does |
+|---|---|---|
+| MSI (`msiexec`) | `nostart=yes` | Installs the agent but does **not** start the `CswAgent` service. On VDI / VM instances created from the resulting golden image with a different host name, the service starts automatically. |
+| PowerShell installer | `-goldenImage` | Equivalent for the PowerShell-script-driven install. |
+
+Per Cisco: *"Pass this parameter, when installing the agent
+using a golden image in a VDI environment or VM template, to
+prevent agent service — CswAgent from starting automatically.
+On VDI/VM instances created using the golden image and with a
+different host name, these services, as expected, start
+automatically."*
+
+> **Earlier wording in this guide claimed there is no Windows
+> equivalent of Linux's `--golden-image` flag. That was wrong**:
+> the equivalents are `nostart=yes` (MSI) and `-goldenImage`
+> (PowerShell). They are first-class supported.
+
+**Capture driver context.** Cisco's chapter calls out that:
+
+- **Windows Server 2008 R2** uses **Npcap** for flow capture
+  (Cisco ships and supports a specific Npcap version with the
+  installer).
+- **Modern Windows Server releases** use the in-box
+  `ndiscap.sys` (an NDIS LWF driver) — Npcap is **not**
+  involved on modern Windows.
+
+The earlier framing in this guide that suggested every Windows
+host runs Npcap was incorrect. **Only Windows 2008 R2 and
+pre-3.8 agents bind to Npcap; modern installs do not.**
 
 ---
 
@@ -39,100 +90,126 @@ installed, running as a Windows service (binary name
 | 05 | Group Policy (GPO) startup script | Domain-joined fallback when SCCM / Intune aren't available | [05-group-policy.md](./05-group-policy.md) |
 | 06 | Verification | Confirming the install actually worked | [06-verification.md](./06-verification.md) |
 
+> **Cisco-documented** vs. **community pattern** breakdown:
+> Methods 01 and 02 follow Cisco's *Install Windows Agent*
+> sections directly. Methods 03–05 are practitioner / customer
+> patterns built on top of Method 01 / 02 — Cisco doesn't
+> publish vendor-specific SCCM / Intune / GPO playbooks but
+> these patterns are widely used in production.
+
 ---
 
 ## OS support snapshot
 
-The Windows agent supports current Windows Server releases out of
-the box. Always cross-check the [**Compatibility Matrix**](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html)
+The Windows agent supports current Windows Server releases.
+Always cross-check the
+[Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html)
 in the CSW documentation portal for your specific CSW release.
 
-| Distribution | Common supported versions |
+| Family | Commonly supported versions |
 |---|---|
 | Windows Server | 2012 R2 · 2016 · 2019 · 2022 · 2025 |
+| Windows Server 2008 R2 | Supported on older agents — Npcap-based flow capture, with a documented clock-drift caveat (Go 1.15 / `tet-main.exe` on this OS) |
 | Windows Client (when allowed by the platform team) | 10 · 11 |
 
-For laptops / desktops in a user-endpoint role, **a CSW agent is
-not required** when the endpoint runs **Cisco AnyConnect Secure
-Mobility Client with NVM** or is registered with **Cisco ISE**.
+For laptops / desktops in a user-endpoint role, **a CSW agent
+is not required** when the endpoint runs **Cisco AnyConnect /
+Secure Client with NVM** or is registered with **Cisco ISE**.
 See [`../docs/05-anyconnect-ise-alternatives.md`](../docs/05-anyconnect-ise-alternatives.md).
 
 ---
 
-## Sensor flavours on Windows
+## Agent flavours on Windows
 
-| Variant | MSI pattern | Service name | Service binary | Provides |
-|---|---|---|---|---|
-| Deep Visibility | `TetSensor.msi` (or `TetrationAgentInstaller-x64.msi` per release) | `TetSensor` (and supporting services) | `tetsen.exe` | Flow + process + software inventory + CVE lookup |
-| Enforcement | Same MSI; Enforcement engaged via agent profile in CSW UI | `TetSensor` + Windows Filtering Platform (WFP) integration | `tetsen.exe` + WFP filters | Deep Visibility + workload-side firewall enforcement |
+Per Cisco's *Install Windows Agents* section, the modern
+Windows agent ships **one** package that contains both
+visibility and enforcement capability. Whether it actually
+enforces is determined by the cluster-side **Agent Config
+Profile**, not by which package was installed.
 
-The CSW *Manage → Agents → Install Agent* UI shows the exact MSI
-file name for your cluster and chosen sensor type. The agent
-runs as **SYSTEM** at runtime.
+| Mode | Service | Service binary (Cisco doc Table 3) | Provides |
+|---|---|---|---|
+| Deep Visibility (default) | `CswAgent` | `CswEngine.exe` | Flow + process + software inventory + CVE lookup |
+| Enforcement | `CswAgent` (same service; enforcement engaged via cluster Agent Config Profile) | `CswEngine.exe` + `TetEnfC.exe` + Windows Filtering Platform (WFP) integration | Deep Visibility + WFP-based workload firewall enforcement |
 
-### NPCAP — what to know
+**Display name** (from `sc qc cswagent`): *Cisco Secure
+Workload Deep Visibility*.
 
-- TetSensor uses **NPCAP** to capture network flows on Windows.
-  Cisco ships the supported NPCAP version with the installer.
-- **Do not swap NPCAP** on a host running TetSensor. Running an
-  NPCAP version (or NPCAP configuration) that CSW has not
-  qualified can cause unknown OS performance or stability
-  issues, per the CSW 4.0 User Guide.
-- Network performance on the host may show a measurable impact
-  from TetSensor + NPCAP. Plan capacity accordingly on
-  flow-heavy hosts (load balancers, DNS / proxy hosts).
+The CSW *Manage → Workloads → Agents → Installer* UI shows the
+exact MSI file name for your cluster. The agent runs as
+**SYSTEM** at runtime.
+
+### Capture-driver model (current vs. legacy)
+
+| Windows version | Capture driver | Notes |
+|---|---|---|
+| Windows Server 2016 / 2019 / 2022 / 2025, Windows 10/11 | **`ndiscap.sys`** (in-box NDIS LWF) | Cisco-shipped; no Npcap. |
+| Windows Server 2008 R2 | **Npcap** (Cisco-shipped, vendored version) | Older agents on 2008 R2 use Npcap. *"Do not swap Npcap"* on a 2008 R2 host running the agent — Cisco only qualifies the Npcap version they ship. |
+| Pre-3.8 CSW agents on any Windows | **Npcap** | Same caveat — keep the Cisco-shipped Npcap. |
+
+> **The "Npcap binds badly to clones" trap that older versions
+> of this guide warned about applies specifically to the
+> Npcap-on-2008R2 (and pre-3.8 agent) case.** It's still worth
+> knowing about for legacy estates, but the recommended fix is
+> the **Cisco-supported VDI flow** (`nostart=yes` /
+> `-goldenImage`) — see the section above. Modern Windows
+> hosts using `ndiscap.sys` are not affected by the Npcap
+> cloning issue.
 
 ---
 
 ## Default install paths and files
 
+> **Caveat — paths are release-dependent.** Cisco's chapter
+> calls out the install directory in the *Install Windows
+> Agents* section. Where this page lists a path, the
+> authoritative answer is in your release's installer screen
+> (and on the host's filesystem after a successful install).
+
 | Path | Purpose |
 |---|---|
-| `%ProgramFiles%\Cisco Tetration\` | Sensor binaries and supporting files (older releases used `C:\Program Files\Cisco\Tetration\`) |
-| `%ProgramData%\Cisco\Tetration\` | Sensor configuration and state |
-| `%ProgramData%\Cisco\Tetration\Logs\` | Sensor logs; check here when troubleshooting |
-| `HKLM\SOFTWARE\Cisco\Tetration` | Registry keys for cluster URL, activation key reference, agent state |
-| Service registry: `HKLM\SYSTEM\CurrentControlSet\Services\TetSensor` | Windows service definition |
-
-The exact paths can change between major CSW releases. If the
-filesystem layout you find on a freshly installed host differs from
-the table above, trust the host — and confirm against your
-release's install guide.
+| `C:\Program Files\Cisco Tetration\` | Agent binaries and supporting files (`CswEngine.exe`, `TetEnfC.exe`, etc.) |
+| `C:\Program Files\Cisco Tetration\Logs\` | Agent logs (`TetSen.exe.log`, `TetEnf.exe.log` — note that the log file names retain the older `TetSen` / `TetEnf` prefix even though the running binaries are `CswEngine.exe` / `TetEnfC.exe`, per Cisco's *Connectivity Tests* section). |
+| `HKLM\SYSTEM\CurrentControlSet\Services\CswAgent` | Windows service definition |
+| `HKLM\SOFTWARE\Cisco\Tetration` *or release-equivalent* | Registry keys for cluster URL, activation key reference, agent state |
 
 ---
 
 ## Common gotchas (fleet-wide)
 
-- **Cloned VMs from a TetSensor-baked template silently capture
-  no flows.** This is the NPCAP cloning trap (see the warning at
-  the top of this doc). Fix: do not bake TetSensor into the
-  template; install as a post-clone step via SCCM / Intune / GPO
-  / a first-boot PowerShell call to the CSW PowerShell
-  installer. Triggers: VMware templates + Instant Clones, Citrix
-  MCS / PVS, AWS / Azure / GCP custom images, Hyper-V VM
-  templates.
-- **Service installs but stays in *Stopped* state.** Check the
-  Windows Event Log: `Application` log → source `TetSensor`.
-  The most common cause is the activation key embedded in the
-  installer was rotated; regenerate from the CSW UI.
-- **WFP integration not engaged in Enforcement mode.** Confirm in
-  CSW UI that the agent profile is *Enforcement* not
-  *Visibility-only*. The WFP rules apply only when the cluster
-  pushes the policy. Note: by default, agents have the
-  *capability* to enforce but enforcement is **disabled** until
-  you turn it on per host.
-- **TLS handshake failed.** Place the cluster CA in
-  `%ProgramData%\Cisco\Tetration\conf\ca.pem` (or whatever path
-  your release expects), restart the service. Note: CSW agents
-  reject any unexpected TLS certificate, so a TLS-decrypting
-  proxy must be configured to bypass the cluster FQDN.
-- **Windows Defender flagging the kernel filter driver or the
-  NPCAP install.** Configure exclusions in Defender / your EDR
-  per Cisco's published guidance — required as a pre-install
-  step (see [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md)).
-- **Unsupported NPCAP version present on the host pre-install.**
-  Remove NPCAP first, then run the TetSensor installer so the
-  Cisco-bundled NPCAP version installs cleanly.
+- **Cloned VMs from a baked template register as the build
+  host.** Don't bake the agent into the template without using
+  the VDI flag. Fix: install with `nostart=yes` (MSI) or
+  `-goldenImage` (PowerShell) when baking; the service will
+  start automatically on first boot of a clone with a different
+  hostname. (See VDI section above.)
+- **Service installs but stays in *Stopped* state.** Check
+  `Application` Event Log for the agent's events (the EventLog
+  Source name has varied across releases — older agents log
+  under `TetSensor`; newer releases may use a different
+  source). Most common cause: the activation key embedded in
+  the installer was rotated; regenerate from the CSW UI.
+- **WFP integration not engaged in Enforcement mode.** The agent
+  ships *capable* of enforcement but enforcement is engaged
+  only when the cluster pushes an Enforcement Agent Config
+  Profile to the host. If the host is in a Deep-Visibility-only
+  profile, WFP rules are not applied.
+- **TLS handshake failed.** Per Cisco: agents validate cluster
+  TLS against a local CA shipped with the installer. If a
+  proxy or NGFW is decrypting egress, configure it to **bypass
+  SSL/TLS decryption** for the CSW cluster FQDN. The exact CA
+  filename and location are in the installer screen for your
+  release; do not hand-craft `ca.pem` paths from older
+  documentation.
+- **Windows Defender flagging the agent or capture driver.**
+  Configure exclusions per Cisco's *Configure Security
+  Exclusions* (Table 3 lists `CswEngine.exe`, `TetEnfC.exe` and
+  the install directory). Required as a pre-install step — see
+  [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md).
+- **Windows Server 2008 R2 only — clock drift on
+  `tet-main.exe`.** Per Cisco's FAQ: the Go-built `tet-main.exe`
+  on 2008 R2 with external NTP / domain-controller NTP can
+  cause clock drift. Fix: periodic `w32tm /resync /force`.
 
 Full troubleshooting in
 [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md).
@@ -141,6 +218,7 @@ Full troubleshooting in
 
 ## See also
 
+- [`../docs/00-official-references.md`](../docs/00-official-references.md) — Cisco's authoritative pages
 - [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md)
 - [`../docs/02-sensor-types.md`](../docs/02-sensor-types.md)
 - [`../docs/03-decision-matrix.md`](../docs/03-decision-matrix.md)

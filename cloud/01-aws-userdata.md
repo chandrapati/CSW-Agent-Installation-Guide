@@ -115,7 +115,7 @@ chmod 640 /etc/tetration/sensor.conf
 dnf install -y /tmp/tet-sensor.rpm
 
 # Start
-systemctl enable --now tetd
+systemctl enable --now csw-agent
 
 # Tag the instance with sensor status (helps inventory reconciliation)
 aws ec2 create-tags --resources "$INSTANCE_ID" \
@@ -152,7 +152,7 @@ aws s3 cp \
 
 # (rest is the same shape as the RHEL version, with apt instead of dnf)
 apt-get install -y /tmp/tet-sensor.deb
-systemctl enable --now tetd
+systemctl enable --now csw-agent
 ```
 
 ---

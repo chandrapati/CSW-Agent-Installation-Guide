@@ -181,7 +181,7 @@ Same pattern as Yum:
 ## Step 3 — Activation (post-install)
 
 Installing the package puts the binaries in place and (depending
-on your CSW release) starts `tetd`, but the agent doesn't yet
+on your CSW release) starts `csw-agent`, but the agent doesn't yet
 know which cluster to register with. There are two patterns for
 handling this:
 

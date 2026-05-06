@@ -72,7 +72,7 @@ class csw_sensor (
       'scope_label'    => $scope_label,
     })),
     require => File['/etc/tetration'],
-    notify  => Service['tetd'],
+    notify  => Service['csw-agent'],
   }
 
   package { 'tet-sensor':
@@ -80,7 +80,7 @@ class csw_sensor (
     require => [File['/etc/tetration/sensor.conf']],
   }
 
-  service { 'tetd':
+  service { 'csw-agent':
     ensure  => running,
     enable  => true,
     require => Package['tet-sensor'],

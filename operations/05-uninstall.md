@@ -18,8 +18,8 @@ This doc covers the two flavours:
 
 ```bash
 # Stop the service first so the kernel hooks unload cleanly
-sudo systemctl stop tetd
-sudo systemctl disable tetd
+sudo systemctl stop csw-agent
+sudo systemctl disable csw-agent
 
 # Remove the package
 # RHEL / CentOS / Oracle Linux / Amazon Linux
@@ -30,7 +30,7 @@ sudo apt-get purge tet-sensor
 
 # Confirm files are gone
 ls -la /usr/local/tet/ 2>&1   # Should be "No such file or directory"
-ls -la /etc/systemd/system/tetd.service 2>&1
+ls -la /etc/systemd/system/csw-agent.service 2>&1
 
 # Remove any leftover config (rpm/dpkg sometimes leaves /etc bits)
 sudo rm -rf /usr/local/tet/ /etc/tetration/
@@ -48,11 +48,11 @@ decommissioned, also de-register from CSW (next section).
 
 ```powershell
 # Stop the service
-Stop-Service TetSensor
-Set-Service -Name TetSensor -StartupType Disabled
+Stop-Service CswAgent
+Set-Service -Name CswAgent -StartupType Disabled
 
 # Uninstall the MSI
-$product = Get-WmiObject -Class Win32_Product -Filter "Name LIKE '%TetSensor%'"
+$product = Get-WmiObject -Class Win32_Product -Filter "Name LIKE '%Cisco Secure Workload%'"
 if ($product) {
     $product.Uninstall()
 }
@@ -61,7 +61,7 @@ if ($product) {
 # msiexec /x {PRODUCT-CODE-FROM-INSTALL} /quiet /norestart
 
 # Confirm
-Get-Service -Name TetSensor 2>$null   # Should error (service gone)
+Get-Service -Name CswAgent 2>$null   # Should error (service gone)
 Test-Path "$env:PROGRAMFILES\Cisco\Tetration"
 Test-Path "$env:PROGRAMDATA\Cisco\Tetration"
 
@@ -195,11 +195,11 @@ usually a cleaner approach than a host-side shutdown handler.)
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Service won't stop ("active (deactivating)") | In-flight telemetry buffer flush | Wait 30s; if still stuck, `systemctl kill -s SIGKILL tetd` |
+| Service won't stop ("active (deactivating)") | In-flight telemetry buffer flush | Wait 30s; if still stuck, `systemctl kill -s SIGKILL csw-agent` |
 | Package removed but service still listed | systemd cache | `systemctl daemon-reload` |
 | Kernel module still loaded after uninstall | Active connections still using the module | Reboot the host or `rmmod` after closing connections |
 | Host shows up as "Pending" in CSW for days | Uninstall but not decommissioned | Decommission via UI or API |
-| Decommissioned host re-appears | Sensor wasn't actually uninstalled; re-registered on its next heartbeat | Confirm `tetd` is gone on the host first, then decommission again |
+| Decommissioned host re-appears | Sensor wasn't actually uninstalled; re-registered on its next heartbeat | Confirm `csw-agent` is gone on the host first, then decommission again |
 | Helm uninstall leaves the namespace | Default Helm behaviour | Explicit `kubectl delete namespace csw-sensor` |
 
 ---

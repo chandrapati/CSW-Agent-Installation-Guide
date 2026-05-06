@@ -1,10 +1,24 @@
-# Kubernetes — DaemonSet via Helm Chart
+# Kubernetes — DaemonSet via Helm Chart *(community pattern)*
 
-The standard pattern for any Kubernetes distribution. Cisco
-publishes a Helm chart for the CSW sensor (chart name varies by
-release; the CSW *Manage → Agents → Install Agent* UI shows the
-current chart name and registry for your cluster). This doc is
-the practitioner walkthrough.
+> **Important — Cisco does not publish a Helm chart for the CSW
+> agent in the 4.0 documentation.** Cisco's documented K8s /
+> OpenShift install path is the **Agent Script Installer** under
+> *Manage → Workloads → Agents → Installer*, which generates the
+> namespace, RBAC, ConfigMap / Secret, and DaemonSet directly.
+> See the
+> [Install Kubernetes or OpenShift Agents](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+> section.
+>
+> The pattern below is a **community / practitioner pattern** for
+> shops standardised on Helm and GitOps that want the install
+> declared as a chart. The values structure is modelled on what
+> Cisco's Agent Script Installer produces, but the chart itself
+> is not Cisco-published — chart names, values keys, and image
+> paths in the snippets below are illustrative.
+>
+> If you're starting fresh, **prefer the Agent Script Installer**;
+> capture its output (`kubectl get all -n tetration -o yaml`) as
+> your GitOps source of truth.
 
 > Working values file in [`./examples/helm/values.yaml`](./examples/helm/values.yaml).
 

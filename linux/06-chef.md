@@ -65,7 +65,7 @@ default['csw_sensor']['package_filename']     = nil   # set in wrapper or env at
 default['csw_sensor']['package_local_path']   = '/tmp/tet-sensor.pkg'
 default['csw_sensor']['ca_path']              = '/etc/tetration/ca.pem'
 default['csw_sensor']['conf_path']            = '/etc/tetration/sensor.conf'
-default['csw_sensor']['service_name']         = 'tetd'
+default['csw_sensor']['service_name']         = 'csw-agent'
 
 # Activation key MUST be set via encrypted data bag, Chef Vault,
 # or environment attribute — never hardcode.
@@ -336,9 +336,9 @@ describe 'csw_sensor::install' do
       expect(chef_run).to upgrade_package('tet-sensor')
     end
 
-    it 'enables and starts tetd' do
-      expect(chef_run).to enable_service('tetd')
-      expect(chef_run).to start_service('tetd')
+    it 'enables and starts csw-agent' do
+      expect(chef_run).to enable_service('csw-agent')
+      expect(chef_run).to start_service('csw-agent')
     end
   end
 end

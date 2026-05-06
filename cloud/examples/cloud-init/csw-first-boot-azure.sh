@@ -2,7 +2,7 @@
 # CSW agent first-boot activation script for Azure VMs from a baked image.
 #
 # Pulls the activation key from Key Vault using the VM's managed identity,
-# unmasks tetd, and starts the service. Marker file ensures one-shot.
+# unmasks csw-agent, and starts the service. Marker file ensures one-shot.
 
 set -euo pipefail
 
@@ -53,16 +53,16 @@ CLUSTER_ENDPOINT=${CLUSTER_ENDPOINT:-csw.example.com}
 EOF
 chmod 0640 /usr/local/tet/conf/sensor.conf
 
-systemctl unmask tetd
-systemctl enable --now tetd
+systemctl unmask csw-agent
+systemctl enable --now csw-agent
 
 # Verify
 sleep 10
-if systemctl is-active --quiet tetd; then
+if systemctl is-active --quiet csw-agent; then
     echo "CSW agent activated successfully."
     touch "${MARKER}"
 else
-    echo "ERROR: tetd failed to start; check journalctl -u tetd"
-    systemctl status tetd --no-pager
+    echo "ERROR: csw-agent failed to start; check journalctl -u csw-agent"
+    systemctl status csw-agent --no-pager
     exit 1
 fi

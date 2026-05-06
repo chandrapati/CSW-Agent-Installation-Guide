@@ -1,28 +1,41 @@
 # Linux — Manual RPM / DEB Install
 
-The simplest method: install the `tet-sensor` package interactively
+The simplest method: install the CSW agent package interactively
 on a single host using the native package manager. Use this for
 labs, troubleshooting, and to learn what the agent installs.
 
-> **Not for fleet rollout.** This method doesn't scale. For more
-> than a few hosts, prefer
-> [`02-csw-generated-script.md`](./02-csw-generated-script.md) (one
-> host at a time but pre-configured) or one of the automation
-> methods (Ansible / Puppet / Chef / Salt).
+> **Authoritative source.** This page is a practitioner walk-
+> through of Cisco's *Install Linux Agent using the Agent Image
+> Installer Method* (in the
+> [Deploy Software Agents on Workloads — Install Linux Agents](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+> chapter). Where the chapter and this page differ, **trust the
+> chapter** for your release.
+
+> **Not for fleet rollout.** This method doesn't scale. For
+> more than a few hosts, prefer
+> [`02-csw-generated-script.md`](./02-csw-generated-script.md)
+> (one host at a time but pre-configured — the **Agent Script
+> Installer**, which is Cisco's recommended method) or one of
+> the automation methods (Ansible / Puppet / Chef / Salt).
 
 ---
 
 ## Prerequisites
 
 - All items from [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md)
-  (specifically: **root or Administrator privilege**, **≥ 1 GB**
-  storage, security-tooling exclusions configured, host can
-  reach the cluster on TCP/443 with TLS pass-through)
+  (specifically: **root privilege**, sufficient disk for the
+  install + log directory, security-tooling exclusions
+  configured per Cisco's *Configure Security Exclusions*
+  guidance, host can reach the cluster on the right ports
+  with **TLS pass-through** — see
+  [`../operations/01-network-prereq.md`](../operations/01-network-prereq.md)
+  for on-prem vs. SaaS port differences)
 - Root or sudo on the workload
-- The right `.rpm` / `.deb` package file for your CSW release and
-  sensor type, downloaded from the CSW *Manage → Agents → Install
-  Agent* UI
-- For on-prem clusters: the cluster CA chain (`ca.pem`)
+- The right `.rpm` / `.deb` package file for your CSW release
+  and agent type, downloaded from *Manage → Workloads →
+  Agents → Installer → Agent Image Installer*. The screen
+  generates a per-cluster bundle that includes the cluster
+  CA cert (`ca.cert`).
 
 ---
 
@@ -31,41 +44,52 @@ labs, troubleshooting, and to learn what the agent installs.
 From any host with access to the CSW UI:
 
 1. Log into the CSW UI
-2. Navigate to *Manage → Agents → Install Agent* (the menu may also
-   read *Sensors* in older releases)
-3. Choose the **OS / distribution / version**
-4. Choose the **sensor type** (Deep Visibility or Enforcement)
-5. Choose the **target scope** (this is baked into the package's
-   embedded activation key)
-6. Click *Download package*
+2. Navigate to *Manage → Workloads → Agents → Installer*
+3. Choose **Agent Image Installer**
+4. Choose the **OS / distribution / version** (and architecture)
+5. Choose the **agent type** (Deep Visibility, or Deep Visibility
+   + Enforcement — note that on modern releases, the **same
+   package** ships both capabilities; whether enforcement
+   actually engages is determined by the cluster-side Agent
+   Config Profile, not by which package was installed)
+6. Click *Download*
 
-The downloaded file follows a naming convention similar to:
+The downloaded bundle includes the agent package and the
+cluster's `ca.cert` for the TLS chain.
+
+The package name follows a pattern like:
 
 ```
-tet-sensor-3.x.y.z-1.<distro>.x86_64.rpm        # RHEL family
-tet-sensor-3.x.y.z-1.<distro>_amd64.deb         # Debian/Ubuntu family
+tet-sensor-<version>.<distro>.x86_64.rpm        # RHEL family
+tet-sensor-<version>.<distro>_amd64.deb         # Debian/Ubuntu family
 ```
 
-(For Enforcement: `tet-sensor-enforcer-...` — same naming pattern.)
+(Cisco's *Install Linux Agent using the Agent Image Installer
+Method* section enumerates the exact filename for each
+distribution / architecture combo for the release you're
+downloading. Trust that section for the canonical filename.)
 
-Transfer the file to the workload (`scp`, `rsync`, or your usual
-file-transfer mechanism).
+Transfer the bundle to the workload (`scp`, `rsync`, or your
+usual file-transfer mechanism).
 
 ---
 
-## Step 2 — (On-prem clusters only) Place the cluster CA
+## Step 2 — Verify the bundled CA cert is in place
 
-If the CSW cluster uses a private / internal CA, deposit the CA
-chain so the agent's TLS handshake succeeds:
+The Agent Image Installer bundle ships the cluster's CA cert
+as **`ca.cert`** alongside the package. Cisco's chapter calls
+this out explicitly: *"`ca.cert` — Mandatory — CA certificate
+for sensor communications."*
 
-```bash
-sudo mkdir -p /etc/tetration
-sudo cp ca.pem /etc/tetration/ca.pem
-sudo chmod 644 /etc/tetration/ca.pem
-```
+For SaaS clusters this is the public CA the agent needs. For
+on-prem clusters this is your cluster's internal CA. **Do not
+swap it for a different file** — the agent only validates
+against this exact CA.
 
-For SaaS clusters this step is unnecessary — public CA validation
-just works.
+The package install itself places the `ca.cert` under the
+agent's install directory (release-dependent — typically
+`<install-dir>/conf/ca.cert`); you don't usually need to drop
+it manually unless the chapter for your release tells you to.
 
 ---
 
@@ -127,39 +151,33 @@ sudo yum install -y ./tet-sensor-3.x.y.z-1.el7.x86_64.rpm
 sudo dnf install -y ./tet-sensor-3.x.y.z-1.el9.x86_64.rpm
 ```
 
-### Post-install — `tet-sensor` user, SELinux, PAM
+### Post-install — SELinux and PAM considerations
 
-The package install creates a special user **`tet-sensor`** on
-the host (the runtime identity for parts of the agent that
-don't need full root):
+The package install registers the `csw-agent` systemd service
+and starts the agent processes (`tet-sensor`, and on
+enforcement-enabled hosts `tet-enforcer`). On SELinux /
+hardened-PAM hosts:
 
-```bash
-id tet-sensor
-# Expected: uid=NNN(tet-sensor) gid=NNN(tet-sensor) groups=NNN(tet-sensor)
-```
+- **SELinux** must permit execute on the agent's install path.
+  The package's default install directory is covered by the
+  SELinux policy that the package installs. **If you used a
+  non-standard install location** (some Agent Script Installer
+  flags allow this), relabel:
 
-If the host is **SELinux-enforcing** or has **PAM hardening**,
-two things must hold for the agent to actually start cleanly:
+  ```bash
+  # Replace <custom-dir> with your custom install directory
+  sudo semanage fcontext -a -t bin_t '<custom-dir>(/.*)?'
+  sudo restorecon -Rv <custom-dir>
+  ```
 
-1. PAM must allow the `tet-sensor` user to run the agent
-   (the install drops a standard `pam.d` fragment — do not
-   strip it during host hardening).
-2. SELinux must permit execute on the agent's install path. The
-   default `/usr/local/tet/` install location is covered by the
-   SELinux policy that the package installs. **If you used
-   `--basedir=<dir>` (via the CSW-generated script) to install
-   somewhere non-standard**, you must relabel:
-
-   ```bash
-   # Replace /opt/csw with your custom basedir
-   sudo semanage fcontext -a -t bin_t '/opt/csw(/.*)?'
-   sudo restorecon -Rv /opt/csw
-   ```
+- **PAM** hardening: do not strip the `pam.d` fragments the
+  package installs unless your security policy team has
+  explicitly approved it.
 
 Confirm SELinux isn't blocking the agent post-start:
 
 ```bash
-sudo ausearch -m avc -ts recent | grep -i tet
+sudo ausearch -m avc -ts recent | grep -iE 'csw|tet'
 # Expected: no AVC denials. If you see denials, fix the labels.
 ```
 
@@ -168,16 +186,22 @@ sudo ausearch -m avc -ts recent | grep -i tet
 ## Step 4 — Confirm the service is running
 
 ```bash
-sudo systemctl status tetd
+sudo systemctl status csw-agent
 ```
 
 Expected output (key lines):
 
 ```
-● tetd.service - Cisco Secure Workload sensor
-     Loaded: loaded (/usr/lib/systemd/system/tetd.service; enabled; ...)
+● csw-agent.service - Cisco Secure Workload Agent
+     Loaded: loaded (/usr/lib/systemd/system/csw-agent.service; enabled; ...)
      Active: active (running) since ...
 ```
+
+> **If you see `csw-agent.service` instead of `csw-agent.service`**:
+> you're on an older Tetration-era agent. The user-facing unit
+> was renamed to `csw-agent` in current CSW releases. The
+> commands and flags below are equivalent — substitute `tetd`
+> for `csw-agent` if your install is the older naming.
 
 If `Active: failed`, jump to Step 6.
 
@@ -185,9 +209,9 @@ If `Active: failed`, jump to Step 6.
 
 ## Step 5 — Confirm the agent registered with the cluster
 
-In the CSW UI, *Manage → Agents → Software Agents*. The new host
-should appear within 1–2 minutes of `tetd` starting. Initial
-status:
+In the CSW UI, *Manage → Workloads → Agents → Agent List*. The
+new host should appear within 1–2 minutes of the service
+starting. Initial status:
 
 - *Running* — registered, telemetry flowing
 - *Not Active* — installed but hasn't checked in (network /
@@ -207,8 +231,10 @@ For deeper verification (logs, ports, process tree), see
 Check the install log:
 
 ```bash
-sudo journalctl -u tetd -n 200
-sudo less /var/log/tetration/tet-sensor.log
+sudo journalctl -u csw-agent -n 200
+# Log file location is release-dependent — typically under
+# /var/log/tetration/ or under the agent's install directory
+sudo ls -la /var/log/tetration/ 2>/dev/null
 ```
 
 Common patterns:
@@ -216,10 +242,10 @@ Common patterns:
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `kernel module compile failed` | kernel-headers package missing | `sudo yum install -y kernel-devel-$(uname -r)` (or `apt install linux-headers-$(uname -r)`); reinstall agent |
-| `tls handshake failed: x509: certificate signed by unknown authority` | CA chain not deposited | Place `ca.pem` per Step 2; `sudo systemctl restart tetd` |
+| `tls handshake failed: x509: certificate signed by unknown authority` | CA cert mismatch (cluster CA rotated, or wrong installer used) | Re-download the **current** Agent Image Installer bundle for your cluster (Cisco regenerates on CA rotation); reinstall; `sudo systemctl restart csw-agent` |
 | `tls handshake failed: x509: certificate has expired or is not yet valid` | Clock skew | `sudo chronyc tracking` or `sudo timedatectl` to verify NTP sync |
-| `connection refused` / `no route to host` | Firewall / network egress | `curl -v https://<cluster-vip>:443/` from the host to test connectivity |
-| `connection timed out` to cluster IP | East-west firewall blocking | Network team — open 443/TCP outbound to the cluster collector VIP |
+| `connection refused` / `no route to host` | Firewall / network egress | Test the cluster destinations: on-prem use `nc -zv <CFG-SERVER> 443`, `nc -zv <COLLECTOR> 5640`, and (Enforcement) `nc -zv <ENFORCER> 5660`; SaaS uses 443 for everything |
+| `connection timed out` to cluster IP | East-west firewall blocking | Network team — open the right ports per [`../operations/01-network-prereq.md`](../operations/01-network-prereq.md) |
 
 ### Package install itself failed
 
@@ -241,17 +267,17 @@ for the full uninstall procedure. Quick version:
 
 ```bash
 # RHEL family
-sudo systemctl stop tetd
+sudo systemctl stop csw-agent
 sudo yum remove -y tet-sensor
 
 # Debian family
-sudo systemctl stop tetd
+sudo systemctl stop csw-agent
 sudo apt remove -y tet-sensor
 ```
 
-The uninstall doc covers cleanup of `/etc/tetration/`,
-`/var/log/tetration/`, and the agent's record in the CSW UI
-(*Manage → Agents → decommission*).
+The uninstall doc covers cleanup of leftover config / log
+directories and decommissioning the agent record in the CSW
+UI (*Manage → Workloads → Agents → Agent List → decommission*).
 
 ---
 

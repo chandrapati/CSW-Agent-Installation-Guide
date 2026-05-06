@@ -80,16 +80,16 @@
         owner: root
         group: root
         mode: '0640'
-      notify: Restart tetd
+      notify: Restart csw-agent
 
     - name: Install tet-sensor
       ansible.builtin.package:
         name: tet-sensor
         state: present
 
-    - name: Ensure tetd running and enabled
+    - name: Ensure csw-agent running and enabled
       ansible.builtin.systemd:
-        name: tetd
+        name: csw-agent
         state: started
         enabled: true
         daemon_reload: true
@@ -108,7 +108,7 @@
           Cluster {{ csw_cluster_fqdn }}:443 reachable: {{ cluster_reachable.failed | ternary('NO', 'YES') }}
 
   handlers:
-    - name: Restart tetd
+    - name: Restart csw-agent
       ansible.builtin.systemd:
-        name: tetd
+        name: csw-agent
         state: restarted

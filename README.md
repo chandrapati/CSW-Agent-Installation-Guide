@@ -19,11 +19,27 @@ telemetry into a working policy workspace"* without surprises.
 > [On-Premises 4.0 User Guide](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40.html)
 > · [SaaS 4.0 User Guide](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-saas-v40.html).
 > A consolidated cross-reference (with the canonical pre-install
-> requirements, installer-script flag table, NPCAP / golden-image
-> caveat, K8s service-mesh and CNI support notes, and the
-> AnyConnect / ISE alternatives to a CSW agent) is in
+> requirements, installer-script flag table, the Windows VDI /
+> golden-image flow, K8s image-pulled-from-cluster behaviour, the
+> Istio sidecar port list and the tested Calico configuration,
+> and the AnyConnect / ISE alternatives to a CSW agent) is in
 > [`docs/00-official-references.md`](./docs/00-official-references.md)
 > — read it before any new install attempt.
+
+> **Scope of this audit (May 2026).** Every factual claim about
+> agent types, service / process names, file paths, install
+> flags, ports, K8s install method, and Windows VDI behaviour in
+> this repository has been cross-referenced against the
+> [Deploy Software Agents on Workloads](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+> chapter of the **CSW 4.0 On-Premises User Guide**. Where Cisco
+> documents something specifically, this repo cites the
+> documented value. Where Cisco doesn't document a particular
+> detail (typical example: the exact MSI ProductCode, the chart
+> name of an internally-maintained Helm chart, or your release's
+> exact installer-script filename), the repo says so explicitly
+> and points back to the User Guide / your cluster's
+> *Manage → Workloads → Agents → Installer* screen as the
+> authoritative source for your specific release.
 
 ---
 
@@ -104,10 +120,12 @@ CSW-Agent-Installation-Guide/
    It cross-references the CSW 4.0 On-Premises and SaaS User
    Guides and restates the authoritative items most often missed
    (1 GB storage, root / Administrator privilege, `tet-sensor`
-   user under SELinux, the Linux installer flag set, the Windows
-   NPCAP golden-image trap, K8s images-pulled-from-cluster
-   behaviour, Istio + Calico support, and the AnyConnect / ISE
-   no-agent paths).
+   user under SELinux, the Linux installer flag set, the
+   documented Windows VDI / golden-image flow (`-goldenImage`
+   PowerShell flag and `nostart=yes` MSI option), K8s
+   images-pulled-from-cluster behaviour, the Istio sidecar port
+   list, the tested Calico 3.13 Felix configuration, and the
+   AnyConnect / ISE no-agent paths).
 1. **Read [`docs/01-prerequisites.md`](./docs/01-prerequisites.md) next.**
    Almost every failed CSW agent install traces back to one of:
    a closed firewall port, a TLS trust gap, an unsupported OS /
@@ -115,9 +133,11 @@ CSW-Agent-Installation-Guide/
    purpose — these are the gates.
 2. **Pick a sensor type from [`docs/02-sensor-types.md`](./docs/02-sensor-types.md).**
    *Deep Visibility* and *Enforcement* are the two flavours 90 %
-   of customer fleets run; the other four (Universal Visibility,
-   AnyConnect NVM, NetFlow / ERSPAN ingestion, Cloud Sensor) have
-   specific niches that the doc walks through.
+   of customer fleets run; AIX, Solaris, and Kubernetes /
+   OpenShift agents are the additional documented platforms in
+   CSW 4.0. The agentless paths — AnyConnect / ISE / cloud
+   connectors and NetFlow / ERSPAN ingestion — cover the cases
+   where a host agent is not feasible.
 3. **Pick an installation method from [`docs/03-decision-matrix.md`](./docs/03-decision-matrix.md).**
    The matrix maps environment shape (one host vs. fleet, on-prem
    vs. cloud, with vs. without an automation pipeline) to the
@@ -140,14 +160,35 @@ CSW-Agent-Installation-Guide/
 
 ## Sensor types at a glance
 
-| Sensor type | What it does | Where it runs | Typical use |
+Per Cisco's
+[Deploy Software Agents on Workloads](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+chapter, CSW 4.0 ships agents for **Linux, Windows, AIX, Solaris,
+and Kubernetes / OpenShift**. Agent **type** within those
+platforms is one of `Visibility` (deep visibility only),
+`Enforcement` (deep visibility + host-firewall enforcement), or
+the Kubernetes / OpenShift agent (DaemonSet form factor). The
+"Other Agent-Like Tools" section of the Cisco chapter lists
+**AnyConnect**, **ISE**, and **SPAN** as connector-fed paths that
+do not require a CSW host agent on the workload.
+
+| Sensor / mechanism | What it does | Where it runs | Typical use |
 |---|---|---|---|
-| **Deep Visibility** | Flow + process telemetry, software inventory, vulnerability lookup | Linux + Windows hosts | Default for every CSW workload that supports it |
-| **Enforcement** | Deep Visibility + workload-side firewall enforcement | Linux + Windows hosts | Workloads that need policy enforced at the host |
-| **Universal Visibility (UV)** | Lighter-weight flow telemetry, no enforcement | Older OS, ARM, embedded, niche kernels | When the Deep agent isn't supported on the platform |
-| **AnyConnect NVM** | Endpoint flow telemetry from user devices | Laptops / desktops via Cisco Secure Client | User-endpoint visibility (BYOD-style) |
-| **NetFlow / ERSPAN ingestion** | Flow records exported by the network device (NetFlow v9 / IPFIX / ERSPAN / NSEL) | Connector on a Secure Workload Ingest Appliance — **no agent on the workload** | When agents are not allowed (network appliances, storage / SAN controllers, OT gateways). See the [Connectors chapter on docs.cisco.com](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/configure-and-manage-connectors-for-secure-workload.html). |
-| **Cloud Sensor / Cloud Connector** | Agentless inventory + flow logs via cloud APIs | CSW pulls from AWS / Azure / GCP / vCenter | Cloud accounts with broad workload coverage requirements; DR or sandbox accounts where agents aren't deployed |
+| **Deep Visibility agent** | Flow + process telemetry, software inventory, CVE lookup | Linux, Windows, AIX, Solaris hosts | Default for every CSW workload that supports it |
+| **Enforcement agent** | Deep Visibility + workload-side firewall enforcement (Linux iptables / nftables, Windows WAF or WFP, AIX IPFilter, Solaris IPFilter) | Linux, Windows, AIX, Solaris hosts | Workloads that need policy enforced at the host |
+| **Kubernetes / OpenShift agent** | Node-level DaemonSet capturing flows for the node and its pods, with K8s metadata enrichment | EKS, AKS, GKE, OpenShift, plain K8s nodes (Linux + Windows worker nodes) | The K8s / OpenShift platform itself |
+| **AnyConnect (connector)** | Flow observations + inventory + labels from Cisco Secure Client (formerly AnyConnect) endpoints with NVM enabled | Endpoints; **no CSW agent on the endpoint** | Corporate laptops / desktops where Secure Client is already deployed |
+| **ISE (connector via pxGrid)** | Endpoint metadata from Cisco ISE | Endpoints; **no CSW agent on the endpoint** | Mixed-device estates (printers, IoT, BYOD) where ISE is the source of identity truth |
+| **SPAN agents (ERSPAN connector)** | Flow records derived from a port-mirror tunnelled via GRE | Connector on a Secure Workload Ingest Appliance; **no agent on the workload** | When the source device can mirror traffic but cannot export NetFlow / IPFIX |
+| **NetFlow / IPFIX / NSEL (connectors)** | Flow records exported natively by the network device | Connector on a Secure Workload Ingest Appliance; **no agent on the workload** | Network appliances, ASA / FTD, F5, NetScaler, Meraki MX, etc. |
+| **Cloud Connector** | Inventory + cloud-platform flow logs (VPC Flow Logs / NSG Flow Logs / GCP VPC Flow Logs) and vCenter inventory | CSW-side connector polling the cloud / vCenter control plane; **no agent on the workload** | Cloud accounts where the agent footprint is intentionally minimised; sandbox / DR / partner accounts |
+
+> **What about "Universal Visibility"?** "Universal Visibility"
+> (UV) was an agent type in earlier Tetration releases. It does
+> **not** appear as an agent type in Cisco's CSW 4.0
+> [Deploy Software Agents on Workloads](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+> chapter. If you are running an older release where UV is still
+> documented, follow that release's User Guide; this repository
+> reflects 4.0 unless explicitly noted.
 
 Detail in [`docs/02-sensor-types.md`](./docs/02-sensor-types.md).
 
@@ -168,8 +209,8 @@ Detail in [`docs/02-sensor-types.md`](./docs/02-sensor-types.md).
 | Windows without SCCM / Intune | GPO startup script | Domain-joined fallback when neither tool is available |
 | Cloud VMs (AWS / Azure / GCP) | Embed in `user_data` / `custom_data` / startup script | New launches; works with any IaC tool |
 | Cloud VMs at scale | Golden AMI / Compute Gallery image | Bake the agent into the base image; zero-touch on new launches |
-| Kubernetes / OpenShift nodes | DaemonSet via Helm chart | Standard pattern for K8s clusters |
-| Air-gapped K8s | Raw DaemonSet manifest with internal registry | When Helm or external chart pulls aren't permitted |
+| Kubernetes / OpenShift nodes | **Cisco-documented method:** Agent Script Installer from *Manage → Workloads → Agents → Installer* — the script provisions namespace, RBAC, and the DaemonSet, and each node pulls the agent image from the CSW cluster | Standard pattern for K8s / OpenShift clusters per the CSW 4.0 User Guide |
+| Air-gapped K8s | Mirror the agent image to your internal registry; either run the agent script installer pointing at the mirror, or maintain your own raw DaemonSet manifest | When the cluster nodes can't pull from the CSW cluster directly |
 | Cloud accounts with broad workload coverage and minimal agent footprint | Cloud Connector (agentless) | Inventory + flow-log scope where deploying agents is impractical |
 | Workloads where agents are not allowed | NetFlow / ERSPAN ingestion via the appropriate Secure Workload connector + Cloud Connector | Network appliances, storage / SAN controllers, OT systems — use the device's native NetFlow / IPFIX / NSEL export where available; fall back to ERSPAN when only port-mirroring is supported |
 
@@ -222,12 +263,17 @@ engagement.
 Specifically:
 
 - Cisco Secure Workload package names, default install paths,
-  systemd unit names (`tetd`), Windows service names, and registry
-  paths reflect typical practice at the time of authoring. The
-  authoritative source for any specific CSW release is the
-  [*Cisco Secure Workload User Guide*](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40.html)
-  and the release notes shipped with your CSW cluster (or with
-  the SaaS portal). Cross-check before deploying.
+  service names, and registry paths follow what Cisco documents
+  for **CSW 4.0**: the Linux systemd unit is **`csw-agent`**, the
+  Windows service is **`CswAgent`** (display name *Cisco Secure
+  Workload Deep Visibility*), and the Cisco-documented install
+  paths are `/usr/local/tet` (default RPM), `/opt/cisco/tetration`
+  (Ubuntu .deb and AIX), `/var/opt/cisco/secure-workload`,
+  `C:\Program Files\Cisco Tetration` (Windows), and
+  `/opt/cisco/secure-workload` (Solaris). Earlier Tetration
+  releases used different service names — confirm against the
+  release notes shipped with your specific CSW cluster (or with
+  the SaaS portal) before deploying.
 - This guide is **release-version-agnostic** in its structure but
   may include commands that change between major versions. Look
   for version-specific notes inline; when in doubt, refer to the

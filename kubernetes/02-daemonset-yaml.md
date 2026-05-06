@@ -1,7 +1,15 @@
-# Kubernetes — DaemonSet via Raw Manifest
+# Kubernetes — DaemonSet via Raw Manifest *(community pattern)*
+
+> **Cisco-documented method is the Agent Script Installer.** See
+> [Install Kubernetes or OpenShift Agents](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html).
+> This page covers a **community / practitioner pattern** for
+> air-gapped or no-Helm shops that prefer to manage the install
+> as raw YAML. The manifest content is modelled on what the
+> Agent Script Installer creates; treat the values, image paths,
+> and namespace as illustrative.
 
 For air-gapped clusters and no-Helm shops. Same end-state as the
-Helm chart pattern — one privileged sensor pod per node — but
+Helm chart pattern — one privileged agent pod per node — but
 declared as a single hand-managed YAML instead of a chart.
 
 > Working manifest in [`./examples/manifest/daemonset.yaml`](./examples/manifest/daemonset.yaml).

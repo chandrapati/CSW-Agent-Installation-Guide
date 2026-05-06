@@ -70,9 +70,9 @@ function Write-Log($msg) {
 }
 
 # Idempotency check
-$svc = Get-Service -Name 'TetSensor' -ErrorAction SilentlyContinue
+$svc = Get-Service -Name 'CswAgent' -ErrorAction SilentlyContinue
 if ($null -ne $svc -and $svc.Status -eq 'Running') {
-    Write-Log "TetSensor already installed and running. Nothing to do."
+    Write-Log "CswAgent already installed and running. Nothing to do."
     exit 0
 }
 
@@ -103,19 +103,19 @@ if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) {
 
 # Give the service a moment to start, then verify
 Start-Sleep -Seconds 30
-$svc = Get-Service -Name 'TetSensor' -ErrorAction SilentlyContinue
+$svc = Get-Service -Name 'CswAgent' -ErrorAction SilentlyContinue
 if ($null -eq $svc) {
-    Write-Log "TetSensor service not present after install."
+    Write-Log "CswAgent service not present after install."
     exit 3
 }
 if ($svc.Status -ne 'Running') {
-    Write-Log "TetSensor service installed but not Running (Status: $($svc.Status)). Attempting Start-Service."
-    Start-Service -Name 'TetSensor'
+    Write-Log "CswAgent service installed but not Running (Status: $($svc.Status)). Attempting Start-Service."
+    Start-Service -Name 'CswAgent'
     Start-Sleep -Seconds 10
     $svc.Refresh()
 }
 
-Write-Log "TetSensor service final status: $($svc.Status)"
+Write-Log "CswAgent service final status: $($svc.Status)"
 exit 0
 ```
 
@@ -207,7 +207,7 @@ plan for it now or adopt SCCM / Intune.
 |---|---|---|
 | Startup script doesn't run | GPO not applying to the OU | `gpresult /h gpresult.html` on a target; confirm the GPO is in the *Applied* list |
 | Script runs but MSI install fails | Network share unreachable from `LocalSystem` context | Confirm the share's permissions include `Domain Computers` (machine accounts), not just user groups |
-| Startup script runs every boot, attempts reinstall | Idempotency check failed | Confirm service name (`TetSensor`) matches your release; some older releases use a different name |
+| Startup script runs every boot, attempts reinstall | Idempotency check failed | Confirm service name (`CswAgent` on current releases; older releases used `TetSensor`) matches your release; some older releases use a different name |
 | Some hosts succeed, others timeout | Slow boot causing GPO timeout | Increase *Specify maximum wait time for Group Policy scripts*; or convert to a scheduled task that runs at boot with a longer grace period |
 | GPO auditing shows the script ran but no install log | `LocalSystem` lacks write access to the temp path | Verify `C:\Windows\Temp` is writable; or change `$logPath` to a different location |
 

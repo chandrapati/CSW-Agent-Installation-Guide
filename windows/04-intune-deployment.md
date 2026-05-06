@@ -2,7 +2,7 @@
 
 For cloud-managed Windows estates (Azure AD-joined, Intune
 enrolled). Package the CSW MSI as a Win32 app, define a detection
-rule that watches the `TetSensor` service, deploy as Required to
+rule that watches the `CswAgent` service, deploy as Required to
 the device group. Optionally add a custom compliance setting that
 flags devices where the agent isn't running.
 
@@ -81,9 +81,9 @@ In the Intune admin centre:
    [`./examples/intune/detection-tetsensor.ps1`](./examples/intune/detection-tetsensor.ps1):
 
    ```powershell
-   # Returns Compliant only when TetSensor service is Running.
+   # Returns Compliant only when CswAgent service is Running.
    # Intune reads STDOUT and a 0 exit code as "detected".
-   $svc = Get-Service -Name TetSensor -ErrorAction SilentlyContinue
+   $svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
    if ($null -eq $svc) {
        exit 1
    }
@@ -125,7 +125,7 @@ the agent isn't running. Conditional Access can then react.
      with one or more named values:
 
      ```powershell
-     $svc = Get-Service -Name TetSensor -ErrorAction SilentlyContinue
+     $svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
      $running = ($svc -ne $null) -and ($svc.Status -eq 'Running')
      # Output a single JSON object
      @{ TetSensorRunning = if ($running) { "true" } else { "false" } } |

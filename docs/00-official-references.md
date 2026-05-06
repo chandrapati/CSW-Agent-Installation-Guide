@@ -117,9 +117,16 @@ This repository deliberately defers to the official docs on:
   — the Compatibility Matrix is updated continuously per release;
   this repo's snapshot tables are illustrative.
 - **Default install paths, service names, registry keys** —
-  validated against typical 4.0 practice; if a release-specific
-  bump renames something (`tetd` → `tet-sensor` is one historical
-  example), the User Guide reflects it first.
+  this repo follows what Cisco documents for **CSW 4.0**: the
+  Linux systemd unit is **`csw-agent`**, the Windows service is
+  **`CswAgent`** (display name *Cisco Secure Workload Deep
+  Visibility*), and Cisco-documented per-platform install
+  directories are `/usr/local/tet`, `/opt/cisco/tetration`,
+  `/var/opt/cisco/secure-workload`,
+  `C:\Program Files\Cisco Tetration`, and
+  `/opt/cisco/secure-workload`. Earlier Tetration releases used
+  different naming — the User Guide for *your* release is the
+  authoritative source.
 - **Cluster-side workflows** — generating the installer script,
   managing scopes, configuring Agent Profiles, switching from
   Visibility to Enforcement, configuring connectors, RBAC, and
@@ -231,58 +238,169 @@ Practitioner cheat-sheet for the most-used flags:
 > for that location (or relabel it) — otherwise the agent will
 > install but fail to start.
 
-### Windows agent — NPCAP and the golden-image trap
+### Windows agent — service, flow capture, and the documented VDI / golden-image flow
 
-- The Windows TetSensor service binary is `tetsen.exe`.
-- TetSensor captures network flows using **NPCAP**. Cisco
-  ships the supported NPCAP version with the installer; running
-  an unsupported NPCAP (or an incompatible NPCAP configuration)
-  can cause unknown OS performance or stability issues. **Do
-  not** swap NPCAP out on hosts that run TetSensor.
-- **Critical golden-image / VM-template caveat.** When the
-  Windows agent is installed on a VM template, NPCAP binds to
-  the network stack at install time. **When a new VM is cloned
-  from that template, the NPCAP binding does not carry forward
-  cleanly** — NPCAP fails to capture on the cloned VM. There is
-  no Windows equivalent of the Linux `--golden-image` flag at
-  this writing; the official guidance is to install TetSensor
-  on each cloned VM via a post-clone deployment step (SCCM,
-  Intune, GPO startup script, or a first-boot PowerShell
-  invocation of the CSW PowerShell installer) rather than
-  baking it into the template.
+> **Authoritative source.** The Windows agent details below are
+> direct from Cisco's
+> [Install Windows Agents for Deep Visibility and Enforcement](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+> chapter (Verify Windows Agent Installation, Deploying Agents on
+> a VDI Instance or VM Template, and Windows Agent Flow Captures
+> sections).
+
+- **Service name.** The Windows service is **`CswAgent`** (case
+  varies in the docs: `CswAgent`, `cswagent`). Display name:
+  *Cisco Secure Workload Deep Visibility*. Verify with
+  `sc.exe query CswAgent` or `services.msc`.
+- **Install path.** `C:\Program Files\Cisco Tetration` by
+  default; configurable via the `-installFolder` PowerShell flag
+  or the `installfolder=` MSI option.
+- **Process names** (per Cisco's *Security Exclusions* table,
+  Table 4): `CswEngine.exe` and `TetEnfC.exe`.
+- **Flow capture driver.**
+  - **Windows Server 2008 R2 (and pre-3.8 agents):** uses
+    **Npcap**. Cisco ships the supported Npcap version with the
+    installer; if an older Npcap is already present, pass
+    `overwritenpcap=yes` (MSI) or `-npcap` (PowerShell) to upgrade
+    it. See the *Windows Agent Installer and Npcap—For Windows
+    2008 R2* subsection of Cisco's chapter for the exact
+    install / upgrade / uninstall behaviour.
+  - **All other Windows OS, agent 3.8+:** uses Microsoft's
+    in-built **`ndiscap.sys`** driver via Event Tracing for
+    Windows (ETW). Sessions are named `CSW_MonNet` and
+    `CSW_MonDns`. Per Cisco's chapter, "the agent installer
+    uninstalls Npcap if [it was] installed by the agent and is
+    not in use" once the host is on agent 3.8+. **You generally
+    should not be touching Npcap on modern Windows installs.**
+- **VDI / VM template / golden-image flow — documented and
+  supported.** Cisco's *Deploying Agents on a VDI Instance or VM
+  Template (Windows)* section walks through the supported flow:
+  - **PowerShell installer:** pass **`-goldenImage`**. Per Cisco:
+    *"install Cisco Secure Workload Agent but do not start the
+    Cisco Secure Workload Services; use to install Cisco Secure
+    Workload Agent on Golden Images in VDI environment or
+    Template VM. On VDI/VM instance created from golden image
+    with different host name, Cisco Secure Workload Services
+    will work normally."*
+  - **MSI installer:** pass **`nostart=yes`**. Per Cisco:
+    *"Pass this parameter, when installing the agent using a
+    golden image in a VDI environment or VM template, to prevent
+    agent service — CswAgent from starting automatically. On VDI
+    / VM instances created using the golden image and with a
+    different host name, these services, as expected, start
+    automatically."*
+  - **Npcap on the golden image.** Per Cisco: *"Agent will not
+    install Npcap on golden VMs, but will be automatically
+    installed if needed on VM instances cloned from a golden
+    image."* This means the Npcap-on-golden-image concern that
+    earlier Tetration documentation called out is **handled by
+    the documented `-goldenImage` / `nostart=yes` flow** — Npcap
+    installs after the clone, when the host name is final.
+  - **Constraint.** Do not change the host name of the golden
+    image / VM template after installing the agent. If you do,
+    Cisco directs you to delete the agent registration via
+    OpenAPI before re-cloning.
+
+> **Linux equivalent.** The Linux installer's **`--golden-image`**
+> flag plays the same role for VDI / VM-template builds on Linux
+> hosts: install but don't start; services start normally on
+> instances cloned with a different host name.
 
 ### Kubernetes / OpenShift — what's actually in the install
 
-For K8s and OpenShift, the installer script does not contain
-the agent software itself. Instead:
+> **Authoritative source.** Cisco's
+> [Install Kubernetes or OpenShift Agents for Deep Visibility and Enforcement](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+> section.
 
-- The script provisions namespaces, RBAC, the DaemonSet, and
-  configuration.
-- Each cluster node **pulls the agent Docker image from the
-  Secure Workload cluster** at pod startup time.
+**Cisco's documented K8s / OpenShift install method is the
+Agent Script Installer.** The CSW UI's *Manage → Workloads →
+Agents → Installer → Agent Script Installer* generates a Linux
+shell script that, when run on a workstation with `kubectl`
+admin context against the cluster, provisions:
 
-This implies:
+- The `tetration` namespace ("Secure Workload entities are
+  created in the `tetration` namespace" — Cisco's exact wording).
+- Service accounts, RBAC, and the DaemonSet.
+- A configuration that points the agent pods at the CSW cluster.
+
+The script itself does **not** contain the agent software.
+Each cluster node **pulls the agent container image from the
+Secure Workload cluster** at pod startup time. Per Cisco:
+*"The HTTP Proxy configured on the agent installer page prior
+to download only controls how Secure Workload agents connect to
+the Secure Workload cluster. This setting does not affect how
+Docker images are fetched by Kubernetes or OpenShift nodes,
+because the container runtime on those nodes uses its own proxy
+configuration."*
+
+**This implies:**
 
 - Cluster nodes need image-pull connectivity to the CSW cluster
-  (or to your internal registry mirror — see
-  [`../kubernetes/01-daemonset-helm.md`](../kubernetes/01-daemonset-helm.md)).
+  on `CFG-SERVER-IP:443` (or to your internal registry mirror).
 - Air-gapped K8s requires the agent image mirrored to your
-  internal registry and an `image.repository` override.
+  internal registry and the matching container-runtime
+  registry / proxy config (Cisco's chapter walks through
+  `containerd` `config.toml` adjustments for this).
 
-**Service mesh.** CSW provides comprehensive visibility and
-enforcement for applications running in Kubernetes / OpenShift
-clusters that have **Istio Service Mesh** enabled.
+> **About Helm charts.** Cisco's CSW 4.0 *Deploy Software
+> Agents on Workloads* chapter does **not** publish or document
+> a Helm chart for the K8s / OpenShift agent — the
+> agent-script-installer flow above is the documented path. Some
+> shops maintain their own Helm chart wrapping the same
+> DaemonSet shape; if your shop uses Helm internally that's a
+> reasonable practice, but treat
+> [`../kubernetes/01-daemonset-helm.md`](../kubernetes/01-daemonset-helm.md)
+> as a community pattern, not a Cisco-published artefact.
+> Always confirm chart name, registry, and image tag against
+> *your* tooling rather than against this repo.
 
-**Calico CNI.** CSW 4.0 supports Calico **3.13** with one of
-the following Felix configurations:
+**Service mesh — Istio.** Cisco's chapter explicitly documents
+visibility and enforcement for applications running in K8s /
+OpenShift clusters with **Istio Service Mesh** enabled, and
+publishes the sidecar / control-plane port list to include in
+your segmentation policies. The default Envoy sidecar ports are
+**15000, 15001, 15004, 15006, 15008, 15020, 15021, 15053,
+15090**; the Istio control-plane ports are **443, 8080, 15010,
+15012, 15014, 15017** (per Cisco's
+*Deep Visibility and Enforcement with Istio Service Mesh*
+section). If your Istio deployment overrides these defaults,
+follow your `istio` global config.
+
+**CNI — Calico.** Per Cisco's *Requirements for Policy
+Enforcement* in the K8s section: *"The following CNI plug-ins
+are tested for the above requirements: **Calico (3.13)**"* with
+one of:
 
 - `ChainInsertMode: Append, IptablesRefreshInterval: 0`, or
 - `ChainInsertMode: Insert, IptablesFilterAllowAction: Return,
   IptablesMangleAllowAction: Return, IptablesRefreshInterval: 0`
 
-If your Calico version or Felix config differs, validate
-behaviour with Cisco TAC before relying on CSW enforcement on
-that cluster.
+Cisco lists the **two requirements** that any CNI must meet for
+CSW enforcement to function: *"Provide flat address space (IP
+network) between all nodes and pods. Network plug-ins that
+masquerade the source pod IP for intracluster communication are
+not supported. Not interfere with Linux iptables rules or marks
+that are used by the Secure Workload Enforcement Agent (mark
+bits 21 and 20 are used to allow and deny traffic for NodePort
+services)."* Other CNIs may meet those two requirements but are
+**not formally tested by Cisco** in the 4.0 chapter — validate
+with TAC before relying on CSW enforcement on a cluster running
+a CNI other than Calico 3.13.
+
+**Other K8s constraints from Cisco's chapter:**
+
+- Privileged pods must be permitted by the cluster's
+  PodSecurity / PSP / SCC policy.
+- `busybox:1.33` images must be preinstalled or pullable from
+  Docker Hub.
+- For Windows worker nodes (CSW agent supports Windows nodes
+  on Kubernetes 1.27+ with `containerd` runtime, on Windows
+  Server 2019 / 2022 per the chapter), the
+  `mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0`
+  image must be preinstalled or pullable.
+- IPVS-based `kube-proxy` mode is **not** supported for
+  OpenShift.
+- Agents on K8s should be configured with **Preserve Rules
+  enabled** in the Agent Config profile.
 
 ### Connections established by the agent
 
@@ -295,6 +413,31 @@ TLS connections** to the cluster across distinct channels:
 | Check-in | Periodic agent health / config fetch |
 | Flow export | Telemetry stream for observed flows |
 | Enforcement | Policy fetch + enforcement ack channel |
+
+**Per-context ports** — direct from Cisco's
+[Connectivity Information](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html)
+table (Table 2 in the chapter):
+
+| Agent type | Config server | Collectors | Enforcement back-end |
+|---|---|---|---|
+| Visibility (on-premises) | `CFG-SERVER-IP:443` | `COLLECTOR-IP:5640` | n/a |
+| Visibility (SaaS) | `CFG-SERVER-IP:443` | `COLLECTOR-IP:443` | n/a |
+| Enforcement (on-premises) | `CFG-SERVER-IP:443` | `COLLECTOR-IP:5640` | `ENFORCER-IP:5660` |
+| Enforcement (SaaS) | `CFG-SERVER-IP:443` | `COLLECTOR-IP:443` | `ENFORCER-IP:443` |
+| Docker image fetch (Kubernetes / OpenShift) | `CFG-SERVER-IP:443` | n/a | n/a |
+
+> Per Cisco: *"Deep visibility and enforcement agents connect to
+> all available collectors. The enforcement agent connects to
+> only one of the available endpoints."* Find the config-server
+> IP at *Platform → Cluster Configuration → Sensor VIP*; find
+> the collectors / enforcer IPs under *External IPs* on the
+> same page.
+>
+> *"The Secure Workload agent always acts as a client to
+> initiate the connections to the services hosted within the
+> cluster, and never opens a connection as a server."* — i.e.
+> no inbound permit is required from the cluster to the agent
+> host. An agent can be located behind NAT.
 
 The exact connection count varies by sensor type (Visibility,
 Enforcement, Kubernetes / OpenShift). Plan firewall and proxy
@@ -314,18 +457,32 @@ destination, port, protocol, and direction.
 The agent runs in a privileged domain — **as root on Linux, as
 SYSTEM on Windows.**
 
-### Supported platforms — CSW 4.0 SaaS
+### Supported platforms — CSW 4.0
 
-CSW 4.0 SaaS supports agents on:
+Per Cisco's chapter intro: *"This chapter describes the
+deployment and management of Cisco Secure Workload software
+agents on various operating systems and environments, such as
+**Linux, Windows, Kubernetes, and AIX**."* The chapter also has
+a dedicated *Install Solaris Agents for Deep Visibility and
+Enforcement* section (Solaris 10 and 11.4). Per-platform
+sub-sections in the chapter:
 
-- Linux (broad distribution coverage)
-- Windows (server + client)
-- AIX
-- Solaris
-- Kubernetes / OpenShift
+- *Install Linux Agents for Deep Visibility and Enforcement*
+- *Install Windows Agents for Deep Visibility and Enforcement*
+- *Install AIX Agents for Deep Visibility and Enforcement*
+- *Install Kubernetes or OpenShift Agents for Deep Visibility
+  and Enforcement*
+- *Install Solaris Agents for Deep Visibility and Enforcement*
 
-Always cross-check the **Compatibility Matrix** for your CSW
-release for the exact OS and kernel versions supported.
+For exact supported OS / kernel versions, the chapter directs
+you to: (1) **Release Notes** for your specific CSW version,
+(2) the **Agent Install Wizard** in your cluster's UI under
+*Manage → Workloads → Agents → Installer* (which lists supported
+versions for the selected platform / agent type), and (3) the
+**Support Matrix** at
+[`cisco.com/go/secure-workload/requirements/agents`](https://www.cisco.com/go/secure-workload/requirements/agents)
+or the public
+[Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html).
 
 ### When you don't need a CSW agent
 

@@ -112,15 +112,15 @@ install — the slower waves catch regressions early.
 ```bash
 # Linux
 sudo /usr/local/tet/tet-sensor --version
-sudo systemctl status tetd
-sudo journalctl -u tetd --since "10 minutes ago" | grep -E "(ERROR|FATAL)"
+sudo systemctl status csw-agent
+sudo journalctl -u csw-agent --since "10 minutes ago" | grep -E "(ERROR|FATAL)"
 ```
 
 ```powershell
 # Windows
-Get-WmiObject -Class Win32_Product -Filter "Name like '%TetSensor%'" |
+Get-WmiObject -Class Win32_Product -Filter "Name like '%Cisco Secure Workload%'" |
   Select-Object Name, Version
-Get-Service -Name TetSensor
+Get-Service -Name CswAgent
 Get-EventLog -LogName Application -Source TetSensor -Newest 20
 ```
 
@@ -138,7 +138,7 @@ In CSW UI:
 | Symptom | Cause | Fix |
 |---|---|---|
 | Upgrade succeeds but agent shows as "old version" in UI | Cached version in CSW; ride out the next heartbeat | Wait 5 minutes; if persistent, restart the sensor service |
-| Upgrade fails with "package conflicts with running service" | Some Linux distros don't auto-stop the service on `rpm -Uvh` | `systemctl stop tetd && rpm -Uvh && systemctl start tetd` |
+| Upgrade fails with "package conflicts with running service" | Some Linux distros don't auto-stop the service on `rpm -Uvh` | `systemctl stop csw-agent && rpm -Uvh && systemctl start csw-agent` |
 | GPO upgrade pattern doesn't catch laptops that weren't online | GPO startup script only runs at boot | Move to SCCM / Intune for fleet upgrades |
 | Helm upgrade triggers all nodes' sensors to restart at once | DaemonSet `maxUnavailable` not set | Set `maxUnavailable: 1` in the DaemonSet update strategy |
 | New sensor version logs noisy warnings about deprecated config | Config schema bumped | Re-render `sensor.conf` from latest template; restart |

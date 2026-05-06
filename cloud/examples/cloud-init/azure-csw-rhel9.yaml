@@ -50,7 +50,7 @@ write_files:
       chmod 640 /etc/tetration/sensor.conf
 
       dnf install -y /tmp/tet-sensor.rpm
-      systemctl enable --now tetd
+      systemctl enable --now csw-agent
 
       rm -f /tmp/tet-sensor.rpm
       echo "CSW sensor install complete at $(date -u +%FT%TZ)"

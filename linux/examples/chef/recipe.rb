@@ -66,14 +66,14 @@ template '/etc/tetration/sensor.conf' do
     activation_key: node['csw_sensor']['activation_key'],
     scope_label:    node['csw_sensor']['scope_label']
   )
-  notifies :restart, 'service[tetd]', :delayed
+  notifies :restart, 'service[csw-agent]', :delayed
 end
 
 package 'tet-sensor' do
   action :upgrade
 end
 
-service 'tetd' do
+service 'csw-agent' do
   supports status: true, restart: true, reload: false
   action   [:enable, :start]
 end

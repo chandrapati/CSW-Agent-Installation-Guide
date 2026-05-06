@@ -113,7 +113,7 @@ write_files:
       dnf install -y /tmp/tet-sensor.rpm
 
       # Start
-      systemctl enable --now tetd
+      systemctl enable --now csw-agent
 runcmd:
   - /usr/local/sbin/install-csw.sh
 ```
@@ -178,9 +178,9 @@ Start-Process -FilePath msiexec.exe -ArgumentList $args -Wait
 
 # Verify
 Start-Sleep -Seconds 30
-$svc = Get-Service -Name TetSensor -ErrorAction SilentlyContinue
+$svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
 if (-not $svc -or $svc.Status -ne 'Running') {
-  Start-Service -Name TetSensor -ErrorAction Continue
+  Start-Service -Name CswAgent -ErrorAction Continue
 }
 </powershell>
 ```

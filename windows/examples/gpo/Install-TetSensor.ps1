@@ -25,9 +25,9 @@ function Write-Log {
 
 try {
     # Idempotency check: agent already healthy?
-    $svc = Get-Service -Name 'TetSensor' -ErrorAction SilentlyContinue
+    $svc = Get-Service -Name 'CswAgent' -ErrorAction SilentlyContinue
     if ($null -ne $svc -and $svc.Status -eq 'Running') {
-        Write-Log "TetSensor already installed and running. Nothing to do."
+        Write-Log "CswAgent already installed and running. Nothing to do."
         exit 0
     }
 
@@ -54,18 +54,18 @@ try {
 
     # Wait for the service to come up
     Start-Sleep -Seconds 30
-    $svc = Get-Service -Name 'TetSensor' -ErrorAction SilentlyContinue
+    $svc = Get-Service -Name 'CswAgent' -ErrorAction SilentlyContinue
     if ($null -eq $svc) {
-        Write-Log "TetSensor service not present after install."
+        Write-Log "CswAgent service not present after install."
         exit 3
     }
     if ($svc.Status -ne 'Running') {
         Write-Log "Service installed but not Running ($($svc.Status)); attempting Start-Service."
-        Start-Service -Name 'TetSensor'
+        Start-Service -Name 'CswAgent'
         Start-Sleep -Seconds 10
         $svc.Refresh()
     }
-    Write-Log "TetSensor service final status: $($svc.Status)"
+    Write-Log "CswAgent service final status: $($svc.Status)"
     exit 0
 } catch {
     Write-Log "Unhandled error: $($_.Exception.Message)"

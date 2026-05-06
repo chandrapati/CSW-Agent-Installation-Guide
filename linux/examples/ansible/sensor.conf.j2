@@ -1,5 +1,5 @@
 # Managed by Ansible — do not edit by hand.
-# Renders to /etc/tetration/sensor.conf and is read by tetd at start.
+# Renders to /etc/tetration/sensor.conf and is read by csw-agent at start.
 ACTIVATION_KEY={{ csw_activation_key }}
 SCOPE={{ csw_scope }}
 {% if csw_proxy_host is defined %}

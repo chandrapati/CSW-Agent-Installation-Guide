@@ -29,17 +29,17 @@
       changed_when: false
       failed_when: pkg_check.rc != 0
 
-    - name: Confirm tetd is active
-      ansible.builtin.command: systemctl is-active tetd
-      register: tetd_state
+    - name: Confirm csw-agent is active
+      ansible.builtin.command: systemctl is-active csw-agent
+      register: csw_agent_state
       changed_when: false
-      failed_when: tetd_state.stdout.strip() != 'active'
+      failed_when: csw_agent_state.stdout.strip() != 'active'
 
-    - name: Confirm tetd is enabled at boot
-      ansible.builtin.command: systemctl is-enabled tetd
+    - name: Confirm csw-agent is enabled at boot
+      ansible.builtin.command: systemctl is-enabled csw-agent
       register: tetd_enabled
       changed_when: false
-      failed_when: tetd_enabled.stdout.strip() != 'enabled'
+      failed_when: csw_agent_enabled.stdout.strip() != 'enabled'
 
     - name: Probe outbound 443 to cluster
       ansible.builtin.wait_for:
@@ -65,8 +65,8 @@
       ansible.builtin.debug:
         msg:
           - "Package:       {{ pkg_check.stdout }}"
-          - "tetd active:   {{ tetd_state.stdout }}"
-          - "tetd enabled:  {{ tetd_enabled.stdout }}"
+          - "csw-agent active:   {{ csw_agent_state.stdout }}"
+          - "csw-agent enabled:  {{ csw_agent_enabled.stdout }}"
           - "Cluster 443:   {{ 'reachable' if not probe.failed else 'UNREACHABLE' }}"
           - "Recent log:    (last 20 lines below)"
           - "{{ log_tail.stdout_lines | join('\n') }}"

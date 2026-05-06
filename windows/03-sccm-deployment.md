@@ -3,7 +3,7 @@
 The standard enterprise pattern for Windows fleets. Package the
 CSW MSI as an Application in Configuration Manager, deploy it as
 a Required Deployment to the target collection, and back it with
-a Compliance Baseline that watches the `TetSensor` service. This
+a Compliance Baseline that watches the `CswAgent` service. This
 gives you inventory tracking, retry logic, audit log, and
 compliance reporting out of the box.
 
@@ -128,7 +128,7 @@ into a tracked metric per device.
    - Discovery script (PowerShell):
 
 ```powershell
-$svc = Get-Service -Name TetSensor -ErrorAction SilentlyContinue
+$svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
 if ($null -eq $svc) {
     Write-Output "NotInstalled"
 } elseif ($svc.Status -eq 'Running') {
@@ -141,7 +141,7 @@ if ($null -eq $svc) {
 4. Compliance rule: value equals `Compliant` (Severity:
    *Critical*)
 5. Optional: remediation script that does
-   `Start-Service -Name TetSensor` (be cautious with auto-remediate
+   `Start-Service -Name CswAgent` (be cautious with auto-remediate
    on critical infra; many orgs prefer alerting + ticket over
    silent remediation)
 
@@ -211,7 +211,7 @@ valuable.
 | Symptom | Cause | Fix |
 |---|---|---|
 | Application reports "Past due — will be installed" but never installs | Client check-in not happening | Run `ccmexec` triggers manually; confirm SCCM client is healthy on the target |
-| Install reports success but service isn't running | MSI installed but `TetSensor` service failed to start | Check `%TEMP%\tetsensor-install.log` per Step 2; check Application event log; check CA / activation key |
+| Install reports success but service isn't running | MSI installed but `CswAgent` service failed to start | Check `%TEMP%\tetsensor-install.log` per Step 2; check Application event log; check CA / activation key |
 | Compliance Baseline reports `NotInstalled` after install reports success | Detection method mismatch (often after MSI ProductCode change) | Update the Application's detection method to match the new ProductCode |
 | Deployment fails with `0x87D00324` (application not detected) | Detection method too strict (e.g., looking for old version) | Re-run *Create Application* wizard with the new MSI to refresh the auto-detection |
 | Defender flags the kernel filter driver | Driver not in default Defender allow-list | Pre-stage Cisco's published exception per your Defender / EDR product |

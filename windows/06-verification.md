@@ -15,13 +15,13 @@ Run from an **elevated** PowerShell on the workload:
 
 ```powershell
 # 1. Service is Running
-Get-Service -Name TetSensor
+Get-Service -Name CswAgent
 
 # 2. Service is set to start automatically
-(Get-Service -Name TetSensor).StartType
+(Get-Service -Name CswAgent).StartType
 
 # 3. Process is alive
-Get-Process -Name TetSensor -ErrorAction SilentlyContinue
+Get-Process -Name CswEngine -ErrorAction SilentlyContinue
 
 # 4. Recent agent log (no errors in last 200 lines)
 $logRoot = "$env:ProgramData\Cisco\Tetration\Logs"
@@ -62,14 +62,14 @@ $paths | ForEach-Object {
 }
 ```
 
-### 2. Confirm `TetSensor` service is healthy
+### 2. Confirm `CswAgent` service is healthy
 
 ```powershell
-$svc = Get-Service -Name TetSensor
+$svc = Get-Service -Name CswAgent
 $svc | Format-List *
 
 # Detailed view: process ID, start type, dependent services
-Get-CimInstance -ClassName Win32_Service -Filter "Name='TetSensor'" |
+Get-CimInstance -ClassName Win32_Service -Filter "Name='CswAgent'" |
   Select-Object Name, State, StartMode, ProcessId, PathName
 ```
 
@@ -82,9 +82,9 @@ Expected:
 If the service is `Stopped`, attempt to start and capture errors:
 
 ```powershell
-Start-Service -Name TetSensor -ErrorAction Continue
+Start-Service -Name CswAgent -ErrorAction Continue
 Start-Sleep -Seconds 5
-Get-Service -Name TetSensor
+Get-Service -Name CswAgent
 ```
 
 ### 3. Confirm related services (Enforcement mode)
@@ -123,7 +123,7 @@ Test-NetConnection -ComputerName $cluster -Port 443
 
 # Active connections from the sensor process
 Get-NetTCPConnection -State Established |
-  Where-Object { $_.OwningProcess -eq (Get-Process -Name TetSensor).Id } |
+  Where-Object { $_.OwningProcess -eq (Get-Process -Name CswEngine).Id } |
   Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort
 ```
 
@@ -179,7 +179,7 @@ troubleshooting doc.
 ### PowerShell — full check on one host
 
 ```powershell
-# Verify-TetSensor.ps1
+# Verify-CswAgent.ps1
 [CmdletBinding()]
 param(
     [string] $ClusterFqdn = 'csw.example.com'
@@ -198,28 +198,28 @@ function Show-Result {
 }
 
 # 1. Service exists and Running
-$svc = Get-Service -Name TetSensor -ErrorAction SilentlyContinue
+$svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
 if ($null -eq $svc) {
-    Show-Result 'TetSensor service' 'FAIL' 'service not found'
+    Show-Result 'CswAgent service' 'FAIL' 'service not found'
 } elseif ($svc.Status -ne 'Running') {
-    Show-Result 'TetSensor service' 'FAIL' "status: $($svc.Status)"
+    Show-Result 'CswAgent service' 'FAIL' "status: $($svc.Status)"
 } else {
-    Show-Result 'TetSensor service' 'PASS' 'Running'
+    Show-Result 'CswAgent service' 'PASS' 'Running'
 }
 
 # 2. Set to Auto start
 if ($svc -and $svc.StartType -eq 'Automatic') {
-    Show-Result 'TetSensor StartType' 'PASS' 'Automatic'
+    Show-Result 'CswAgent StartType' 'PASS' 'Automatic'
 } elseif ($svc) {
-    Show-Result 'TetSensor StartType' 'WARN' "StartType=$($svc.StartType)"
+    Show-Result 'CswAgent StartType' 'WARN' "StartType=$($svc.StartType)"
 }
 
 # 3. Process alive
-$proc = Get-Process -Name TetSensor -ErrorAction SilentlyContinue
+$proc = Get-Process -Name CswEngine -ErrorAction SilentlyContinue
 if ($null -ne $proc) {
-    Show-Result 'TetSensor process' 'PASS' "PID $($proc.Id), WS $([int]($proc.WorkingSet/1MB)) MB"
+    Show-Result 'CswEngine process' 'PASS' "PID $($proc.Id), WS $([int]($proc.WorkingSet/1MB)) MB"
 } else {
-    Show-Result 'TetSensor process' 'FAIL' 'no process'
+    Show-Result 'CswEngine process' 'FAIL' 'no process'
 }
 
 # 4. Outbound to cluster

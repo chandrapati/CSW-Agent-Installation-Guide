@@ -102,14 +102,14 @@ The script:
    directory
 6. Runs `msiexec /i <msi> /quiet /norestart`
 7. Writes activation details to the agent registry / config
-8. Starts the `TetSensor` service (and any related services)
+8. Starts the `CswAgent` service (and any related services)
 9. Registers with the cluster
 
 Expected end-of-run output (paraphrased):
 
 ```
 [INFO] Sensor installation complete
-[INFO] Service TetSensor started
+[INFO] Service CswAgent started
 [INFO] Sensor registered with cluster <cluster>
 [INFO] Workload UUID: <uuid>
 ```
@@ -191,7 +191,7 @@ proper audit log.
 | Script blocked by execution policy | Org policy enforces signed scripts | Sign the script with your code-signing cert; or run with `-ExecutionPolicy Bypass` for the session (subject to org policy) |
 | `Invoke-WebRequest: cannot find URL` during download | Workload can't reach the cluster on 443/TCP | `Test-NetConnection <cluster> -Port 443`; open the firewall port; or use `-NoDownload -MsiPath` |
 | Script reports `OS not supported` | OS / build not on the matrix for this CSW release | Check the [Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html) |
-| `TetSensor` started but registration is *Not Active* in UI | Activation key rejected | Regenerate the script in the UI; rerun |
+| `CswAgent` started but registration is *Not Active* in UI | Activation key rejected | Regenerate the script in the UI; rerun |
 | Hangs at "validating MSI signature" | Time skew | Confirm `w32time` is in sync (`w32tm /query /status`) |
 | Defender / EDR quarantines the agent during install | EDR sees a previously unknown driver | Pre-stage Cisco's published allow-list / exception per your EDR product |
 

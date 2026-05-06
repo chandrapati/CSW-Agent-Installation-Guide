@@ -69,9 +69,9 @@ thing per host.
         var: csw_install.stdout_lines
       when: csw_install.changed
 
-    - name: Ensure tetd is running and enabled
+    - name: Ensure csw-agent is running and enabled
       ansible.builtin.systemd:
-        name: tetd
+        name: csw-agent
         state: started
         enabled: true
         daemon_reload: true
@@ -193,9 +193,9 @@ up an internal repo.
         state: present
       when: ansible_facts['pkg_mgr'] == 'apt'
 
-    - name: Ensure tetd is running and enabled
+    - name: Ensure csw-agent is running and enabled
       ansible.builtin.systemd:
-        name: tetd
+        name: csw-agent
         state: started
         enabled: true
         daemon_reload: true
@@ -263,9 +263,9 @@ package manager.
         name: tet-sensor
         state: present
 
-    - name: Ensure tetd running and enabled
+    - name: Ensure csw-agent running and enabled
       ansible.builtin.systemd:
-        name: tetd
+        name: csw-agent
         state: started
         enabled: true
         daemon_reload: true
@@ -320,11 +320,11 @@ vault_csw_activation_key_prod: "<key-from-CSW-UI>"
       failed_when: pkg_query.rc != 0
       when: ansible_facts['os_family'] == 'RedHat'
 
-    - name: Confirm tetd is active
-      ansible.builtin.command: systemctl is-active tetd
-      register: tetd_state
+    - name: Confirm csw-agent is active
+      ansible.builtin.command: systemctl is-active csw-agent
+      register: csw_agent_state
       changed_when: false
-      failed_when: tetd_state.stdout.strip() != 'active'
+      failed_when: csw_agent_state.stdout.strip() != 'active'
 
     - name: Confirm sensor can reach cluster (port open)
       ansible.builtin.wait_for:

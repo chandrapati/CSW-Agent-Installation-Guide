@@ -10,7 +10,7 @@ learn what the agent installs.
 > (one host at a time but pre-configured) or one of the deployment
 > platform methods (SCCM / Intune / GPO).
 
-> **Not for VM templates / golden images.** TetSensor uses NPCAP
+> **Not for VM templates / golden images.** CswAgent (legacy `TetSensor` on older releases) uses Npcap on Windows 2008 R2; modern Windows releases use the in-box `ndiscap.sys`
 > for capture; NPCAP binds to the network stack at install time
 > and **does not bind cleanly on VMs cloned from the template** —
 > capture silently fails on every clone. Install on each VM
@@ -56,7 +56,7 @@ The downloaded file follows a naming convention similar to:
 TetrationAgentInstaller-3.x.y.z-x64.msi
 ```
 
-(Older releases name it `TetSensor.msi`; newer releases tend to
+(Older releases name it `TetSensor.msi`; newer releases name it `TetrationAgentInstaller-x64.msi` (or release-equivalent) — check the *Manage → Workloads → Agents → Installer* screen in your cluster for the exact filename.
 include the version number in the file name.)
 
 Transfer the file to the workload (RDP file copy, SMB share,
@@ -132,7 +132,7 @@ by your release's MSI.
 ## Step 4 — Confirm the service is running
 
 ```powershell
-Get-Service -Name TetSensor
+Get-Service -Name CswAgent
 ```
 
 Expected output:
@@ -140,7 +140,7 @@ Expected output:
 ```
 Status   Name               DisplayName
 ------   ----               -----------
-Running  TetSensor          Cisco Secure Workload Sensor
+Running  CswAgent           Cisco Secure Workload Deep Visibility
 ```
 
 You may also see related supporting services (names vary by

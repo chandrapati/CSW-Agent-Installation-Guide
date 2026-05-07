@@ -40,15 +40,8 @@ az storage container create \
 az storage blob upload \
   --account-name internalcswagents \
   --container-name agents \
-  --file tet-sensor-3.x.y.z-1.el9.x86_64.rpm \
-  --name linux/el9/tet-sensor-3.x.y.z-1.el9.x86_64.rpm \
-  --auth-mode login
-
-az storage blob upload \
-  --account-name internalcswagents \
-  --container-name agents \
-  --file ca.pem \
-  --name linux/ca.pem \
+  --file tetration_linux_installer.sh \
+  --name linux/tetration_linux_installer.sh \
   --auth-mode login
 
 # Grant the VM's managed identity Storage Blob Data Reader on the container
@@ -85,35 +78,15 @@ write_files:
         "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/" \
         | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
 
-      # Pull the agent package
+      # Pull the CSW-generated installer script. Treat this script
+      # as a secret because it embeds activation material.
       curl -s -L -H "Authorization: Bearer $TOKEN" -H "x-ms-version: 2019-12-12" \
-        -o /tmp/tet-sensor.rpm \
-        "https://internalcswagents.blob.core.windows.net/agents/linux/el9/tet-sensor-3.x.y.z-1.el9.x86_64.rpm"
-
-      # Pull the CA
-      mkdir -p /etc/tetration && chmod 750 /etc/tetration
-      curl -s -L -H "Authorization: Bearer $TOKEN" -H "x-ms-version: 2019-12-12" \
-        -o /etc/tetration/ca.pem \
-        "https://internalcswagents.blob.core.windows.net/agents/linux/ca.pem"
-
-      # Get activation key from Key Vault (use az login with managed identity)
-      az login --identity --output none
-      ACTIVATION_KEY=$(az keyvault secret show \
-        --vault-name csw-prod-kv \
-        --name activation-key-prod-web \
-        --query value -o tsv)
-
-      cat > /etc/tetration/sensor.conf <<EOF
-      ACTIVATION_KEY=$ACTIVATION_KEY
-      SCOPE=prod:web-tier
-      EOF
-      chmod 640 /etc/tetration/sensor.conf
+        -o /tmp/tetration_linux_installer.sh \
+        "https://internalcswagents.blob.core.windows.net/agents/linux/tetration_linux_installer.sh"
 
       # Install
-      dnf install -y /tmp/tet-sensor.rpm
-
-      # Start
-      systemctl enable --now csw-agent
+      chmod 700 /tmp/tetration_linux_installer.sh
+      bash /tmp/tetration_linux_installer.sh
 runcmd:
   - /usr/local/sbin/install-csw.sh
 ```
@@ -148,31 +121,11 @@ $h = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }
 
 # Pull MSI
 # NOTE: replace the filename below with the exact installer name from
-# your CSW UI (Manage → Workloads → Agents → Installer). Older
-# releases name this `TetSensor.msi`; current releases name it
-# `TetrationAgentInstaller-<version>-x64.msi` (or release equivalent).
+# your CSW UI or extracted Agent Image Installer package.
 $msiFilename = "TetrationAgentInstaller-3.x.y.z-x64.msi"
 $msiUrl = "https://internalcswagents.blob.core.windows.net/agents/windows/$msiFilename"
 $msiLocal = "C:\Windows\Temp\$msiFilename"
 Invoke-WebRequest -Uri $msiUrl -Headers $h -OutFile $msiLocal
-
-# Pull CA (on-prem clusters)
-$caUrl = "https://internalcswagents.blob.core.windows.net/agents/windows/ca.pem"
-$tetConf = "$env:ProgramData\Cisco\Tetration\conf"
-New-Item -ItemType Directory -Force -Path $tetConf | Out-Null
-Invoke-WebRequest -Uri $caUrl -Headers $h -OutFile "$tetConf\ca.pem"
-
-# Get activation key from Key Vault
-$kvTokenResp = Invoke-RestMethod -Headers @{Metadata="true"} -Method GET `
-  -Uri "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://vault.azure.net"
-$kvToken = $kvTokenResp.access_token
-$secret = Invoke-RestMethod -Headers @{Authorization="Bearer $kvToken"} -Method GET `
-  -Uri "https://csw-prod-kv.vault.azure.net/secrets/activation-key-prod-web?api-version=7.4"
-
-# (Activation key is read into $secret.value; the CSW MSI bakes the key in
-# during the CSW UI generation step. If you regenerate from the UI, you may
-# not need to re-set it here. Otherwise write it to the agent registry per
-# your CSW release's documented method.)
 
 # Install
 $args = @(
@@ -182,11 +135,9 @@ $args = @(
 )
 Start-Process -FilePath msiexec.exe -ArgumentList $args -Wait
 
-# Verify (release-agnostic — current releases use CswAgent;
-# older releases used TetSensor)
+# Verify
 Start-Sleep -Seconds 30
-$svc = Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
-       Select-Object -First 1
+$svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
 if (-not $svc -or $svc.Status -ne 'Running') {
   if ($svc) { Start-Service -Name $svc.Name -ErrorAction Continue }
 }
@@ -262,7 +213,8 @@ Full troubleshooting in
 
 ## See also
 
-- [`./examples/terraform/azure-customdata.tf`](./examples/terraform/azure-customdata.tf) — runnable Terraform
+- Terraform example intentionally removed until it can be rebuilt
+  around the CSW-generated installer-script flow.
 - [`./examples/cloud-init/azure-csw-rhel9.yaml`](./examples/cloud-init/azure-csw-rhel9.yaml) — runnable cloud-init
 - [`04-terraform.md`](./04-terraform.md) — multi-cloud IaC patterns
 - [`06-azure-vm-image.md`](./06-azure-vm-image.md) — image-baked alternative

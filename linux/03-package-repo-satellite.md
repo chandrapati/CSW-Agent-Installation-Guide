@@ -180,37 +180,13 @@ Same pattern as Yum:
 
 ## Step 3 — Activation (post-install)
 
-Installing the package puts the binaries in place and (depending
-on your CSW release) starts `csw-agent`, but the agent doesn't yet
-know which cluster to register with. There are two patterns for
-handling this:
-
-### Pattern A — Drop a config file before the package install
-
-Place `/etc/tetration/sensor.conf` (or the release-equivalent)
-**before** the package install with cluster URL, activation key,
-and CA chain. The package install picks it up. Suitable for
-config-managed environments.
-
-```bash
-# Example /etc/tetration/sensor.conf
-ACTIVATION_KEY=<key-from-CSW-UI>
-HTTPS_PROXY_HOST=<proxy.host>
-HTTPS_PROXY_PORT=<port>
-SCOPE=<scope-name>
-```
-
-```bash
-# Place before install
-sudo install -m 0640 sensor.conf /etc/tetration/sensor.conf
-sudo install -m 0644 ca.pem /etc/tetration/ca.pem
-
-# Then install
-sudo dnf install -y tet-sensor
-```
-
-The activation key value comes from the CSW *Manage → Agents*
-UI — generate it once for the scope and treat it as a secret.
+Installing a raw package from a repository is not the primary
+Cisco-documented flow. The CSW-generated installer script embeds
+the release-specific site files and activation material, so prefer
+that script even when you mirror RPM / DEB packages internally.
+Do not assume `/etc/tetration/sensor.conf` or
+`/etc/tetration/ca.pem` will be read by CSW 4.0 unless the
+installer output for your release or TAC confirms it.
 
 ### Pattern B — Use the CSW-generated installer instead
 

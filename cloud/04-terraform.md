@@ -179,25 +179,11 @@ TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
 REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
   http://169.254.169.254/latest/meta-data/placement/region)
 
-# Pull payload
-aws s3 cp "${agent_s3_uri}" /tmp/tet-sensor.rpm --region "$REGION"
-
-mkdir -p /etc/tetration && chmod 750 /etc/tetration
-aws s3 cp "${ca_s3_uri}" /etc/tetration/ca.pem --region "$REGION" --quiet || true
-
-# Activation key from SSM
-ACTIVATION_KEY=$(aws ssm get-parameter \
-  --name "${ssm_param_name}" --with-decryption \
-  --region "$REGION" --query Parameter.Value --output text)
-
-cat > /etc/tetration/sensor.conf <<EOF
-ACTIVATION_KEY=$ACTIVATION_KEY
-SCOPE=${csw_scope}
-EOF
-chmod 640 /etc/tetration/sensor.conf
-
-dnf install -y /tmp/tet-sensor.rpm
-systemctl enable --now csw-agent
+# Pull and run the Cisco-generated installer script. Treat it as a
+# secret because it embeds activation material.
+aws s3 cp "${installer_s3_uri}" /tmp/tetration_linux_installer.sh --region "$REGION"
+chmod 700 /tmp/tetration_linux_installer.sh
+bash /tmp/tetration_linux_installer.sh
 ```
 
 ---
@@ -225,7 +211,8 @@ resource "azurerm_user_assigned_identity" "csw_vm" {
 
 # Grant identity Storage Blob Data Reader on the agents container,
 # and Key Vault Secrets User on the relevant secret. (RBAC examples
-# omitted for brevity; see ./examples/terraform/azure-customdata.tf
+# omitted for brevity; rebuild from the CSW-generated installer-script
+# flow rather than older package-plus-ca examples.
 # for the full set.)
 
 locals {

@@ -82,13 +82,10 @@ apply, with these additions:
   `hostPID: true`, and `volumeMounts` to host paths
   (`/proc`, `/sys`, `/var/log`).
 - **Pod Security Admission (PSA).** Default `restricted` profile
-  blocks privileged pods. The Cisco-documented namespace for the
-  K8s install is **`tetration`** — label it
-  `pod-security.kubernetes.io/enforce: privileged`. The
-  community Helm / raw-manifest patterns in this folder use
-  `csw-sensor` for clarity in practitioner snippets, but if you
-  follow Cisco's Agent Script Installer the namespace will be
-  `tetration`.
+  blocks privileged pods. Cisco documents that Secure Workload
+  entities are created in the **`tetration`** namespace. If your
+  Kubernetes version enforces PSA, allow privileged pods for that
+  namespace according to your cluster policy.
 - **OpenShift / SCC.** OpenShift adds Security Context
   Constraints on top of PSA. The agent namespace needs the
   `privileged` SCC bound to the agent's ServiceAccount. See
@@ -118,12 +115,12 @@ apply, with these additions:
 
 | Item | Cisco-documented (Agent Script Installer) | Community-pattern files (01, 02 in this folder) |
 |---|---|---|
-| Namespace | **`tetration`** | `csw-sensor` (chosen for practitioner clarity) |
-| ServiceAccount | (per the script's output) | `csw-sensor` |
-| ClusterRole | (per the script's output) | `csw-sensor` (read access to nodes, pods, services, namespaces) |
+| Namespace | **`tetration`** | Use `tetration` unless your generated installer output differs |
+| ServiceAccount | (per the script's output) | Copy from the generated installer output |
+| ClusterRole | (per the script's output) | Copy from the generated installer output |
 | Image source | **CSW cluster itself** — nodes pull from `CFG-SERVER:443` | Mirrored to internal registry; supplied via `image.repository` override |
-| DaemonSet name | (per the script's output) | `csw-sensor` |
-| Configuration source | (per the script's output — typically a Secret + ConfigMap) | A Secret (`csw-sensor-config`) holding cluster URL, activation key, CA chain |
+| DaemonSet name | (per the script's output) | Copy from the generated installer output |
+| Configuration source | (per the script's output) | Do not invent Secret keys; copy from the generated installer output |
 
 > **In production**, the simplest correct path is: run the
 > Agent Script Installer once per cluster, capture what it

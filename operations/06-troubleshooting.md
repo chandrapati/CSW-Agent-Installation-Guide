@@ -13,7 +13,7 @@ Sensor installs cleanly?
   no  → check package install logs (yum / apt / msiexec verbose)
   yes ↓
 Service running?
-  no  → systemctl status csw-agent  (Linux) / Get-Service -Name 'CswAgent','TetSensor' (Windows)
+  no  → systemctl status csw-agent (Linux) / Get-Service CswAgent (Windows)
         → check journalctl -u csw-agent / Application Event Log
   yes ↓
 Host can resolve cluster FQDN?
@@ -43,9 +43,8 @@ File a TAC case — atypical pattern
 Sensor service running?
   no  → see Symptom 1
   yes ↓
-Sensor type is Deep Visibility or higher?
-  no  → check sensor type in CSW UI; Universal Visibility
-        sensors are per-app, not per-host
+Sensor type is Deep Visibility or Enforcement?
+  no  → check the agent type and connector source in CSW UI
   yes ↓
 Host has any actual network traffic?
   no  → run `ss -tn` (Linux) / `netstat -ano` (Windows);
@@ -106,12 +105,10 @@ Look for:
   flapping; check network path
 - `Activation token rejected` → token expired or rotated; re-key
 
-Windows — Cisco's 4.0 docs use both `CswAgent` (current releases)
-and `TetSensor` (older releases) as Application-log providers;
-query both:
+Windows:
 ```powershell
-Get-WinEvent -LogName Application -ProviderName 'CswAgent','TetSensor' `
-  -MaxEvents 50 -ErrorAction SilentlyContinue |
+Get-WinEvent -LogName Application -MaxEvents 100 |
+  Where-Object { $_.ProviderName -like '*Csw*' -or $_.ProviderName -like '*Cisco*' -or $_.Message -like '*CswAgent*' -or $_.Message -like '*Secure Workload*' } |
   Where-Object { $_.LevelDisplayName -in 'Error','Warning' }
 ```
 
@@ -168,13 +165,13 @@ for the broader enforcement design pattern.
 ```
 Cluster has Pod Security Admission with restricted profile?
   yes → namespace needs pod-security.kubernetes.io/enforce=privileged
-        kubectl label namespace csw-sensor \
+        kubectl label namespace tetration \
           pod-security.kubernetes.io/enforce=privileged
   no  ↓
 OpenShift cluster?
   yes → privileged SCC needs to be bound to the SA
         oc adm policy add-scc-to-user privileged \
-          -z csw-sensor -n csw-sensor
+          -z <serviceaccount-from-cisco-installer> -n tetration
   no  ↓
 Image pull failing?
   yes → see Symptom 8
@@ -182,7 +179,7 @@ Image pull failing?
 Pod scheduling failing on tainted nodes?
   yes → add tolerations: [- operator: Exists]
   no  ↓
-Run `kubectl describe pod -n csw-sensor <pod>` for events
+Run `kubectl describe pod -n tetration <pod>` for events
 ```
 
 ---

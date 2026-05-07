@@ -1,25 +1,17 @@
-# Install-TetSensor.ps1
+# Install-CswAgent.ps1
 # GPO startup script — installs the Cisco Secure Workload (CSW) agent
 # MSI silently. Runs as LocalSystem at machine boot. Idempotent.
 #
-# Cisco's 4.0 documentation references TWO Windows service names
-# depending on the agent release:
-#   * CswAgent  — current releases (display name "Cisco Secure
-#                 Workload Deep Visibility")
-#   * TetSensor — older releases
-# This script accepts either, so it stays valid across a phased
-# fleet upgrade.
-#
-# The filename is kept as `Install-TetSensor.ps1` for backward
-# compatibility with anything that already references it from a
-# GPO. The script body is release-agnostic.
+# Cisco Secure Workload 4.0 documents the Windows service as
+# CswAgent (display name "Cisco Secure Workload Deep Visibility").
+# If you are maintaining an older Tetration-era agent that uses a
+# different service name, use that release's Cisco guide and adapt
+# this script intentionally.
 #
 # Stage this file alongside the MSI on the GPO content share, e.g.:
 #   \\fileserver\CSW$\<version>\
-#       Install-TetSensor.ps1
-#       TetrationAgentInstaller-<version>-x64.msi   # current releases
-#       (or)
-#       TetSensor.msi                               # older releases
+#       Install-CswAgent.ps1
+#       TetrationAgentInstaller-<version>-x64.msi
 #
 # Reference from: Computer Configuration → Policies → Windows Settings →
 #                 Scripts (Startup/Shutdown) → Startup → PowerShell Scripts → Add
@@ -37,11 +29,8 @@ function Write-Log {
     "$stamp  $Message" | Out-File -FilePath $logPath -Append -Encoding UTF8
 }
 
-# Helper: returns the running CSW service object (CswAgent or
-# TetSensor), or $null if neither is present.
 function Get-CswAgentService {
-    Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
-      Select-Object -First 1
+    Get-Service -Name 'CswAgent' -ErrorAction SilentlyContinue
 }
 
 try {
@@ -77,7 +66,7 @@ try {
     Start-Sleep -Seconds 30
     $svc = Get-CswAgentService
     if ($null -eq $svc) {
-        Write-Log "Neither CswAgent nor TetSensor service is present after install."
+        Write-Log "CswAgent service is not present after install."
         exit 3
     }
     if ($svc.Status -ne 'Running') {

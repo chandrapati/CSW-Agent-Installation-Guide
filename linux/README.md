@@ -101,13 +101,10 @@ you'd add to AV / EDR exclusion lists):
   cluster pushes an Enforcement config profile)
 - `tet-main` — auxiliary helper
 
-> **Why "csw-agent" and not "tetd"?** Cisco renamed the
-> user-facing systemd unit from the Tetration-era `tetd` to
-> `csw-agent` in current CSW releases. Some older
-> documentation, blog posts, and Tetration-era runbooks
-> reference `tetd`; on a fresh CSW 4.x install the unit you'll
-> manage is `csw-agent`. The underlying process binaries still
-> carry the `tet-` prefix.
+> **Why `csw-agent`?** Cisco Secure Workload 4.0 documents the
+> Linux service as `csw-agent`. This guide targets CSW 4.0, so
+> service-management examples use `csw-agent`. The underlying
+> process binaries still carry the `tet-` prefix.
 
 The CSW *Manage → Workloads → Agents → Installer* UI shows the
 exact package name and download URL for your cluster and

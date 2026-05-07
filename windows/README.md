@@ -17,15 +17,13 @@ cluster.
 > differs, trust the *Manage → Workloads → Agents → Installer*
 > screen in your cluster.
 
-> **Naming note — `TetSensor` vs. `CswAgent`.** Cisco renamed
-> the user-facing Windows service from the Tetration-era
-> `TetSensor` to `CswAgent` in current CSW releases. Older
-> documentation, scripts, and Tetration-era runbooks reference
-> `TetSensor`; on a fresh CSW 4.x install you'll manage
-> `CswAgent`. Where this guide previously said `TetSensor`, the
-> current value is `CswAgent`. The MSI filename has also
-> evolved; check the *Manage → Workloads → Agents → Installer*
-> screen for the exact filename your release ships.
+> **Naming note.** Cisco Secure Workload 4.0 documents the
+> Windows service as **`CswAgent`**. This guide targets CSW 4.0,
+> so examples should use `CswAgent`. If you are maintaining an
+> older Tetration-era deployment whose service is named
+> `TetSensor`, use that release's Cisco guide and adapt the
+> examples intentionally; do not treat older names as valid CSW
+> 4.0 defaults.
 
 > **Before any of these methods**, confirm
 > [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md)
@@ -183,12 +181,10 @@ exact MSI file name for your cluster. The agent runs as
   `-goldenImage` (PowerShell) when baking; the service will
   start automatically on first boot of a clone with a different
   hostname. (See VDI section above.)
-- **Service installs but stays in *Stopped* state.** Check
-  `Application` Event Log for the agent's events (the EventLog
-  Source name has varied across releases — older agents log
-  under `TetSensor`; newer releases may use a different
-  source). Most common cause: the activation key embedded in
-  the installer was rotated; regenerate from the CSW UI.
+- **Service installs but stays in *Stopped* state.** Check the
+  `Application` Event Log and the MSI / PowerShell installer log
+  for agent errors. Most common cause: the activation key embedded
+  in the installer was rotated; regenerate from the CSW UI.
 - **WFP integration not engaged in Enforcement mode.** The agent
   ships *capable* of enforcement but enforcement is engaged
   only when the cluster pushes an Enforcement Agent Config

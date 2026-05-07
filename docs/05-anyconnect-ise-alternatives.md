@@ -17,7 +17,7 @@ model for both.
 |---|---|---|---|
 | **AnyConnect NVM** | Cisco Secure Client (formerly AnyConnect) with the Network Visibility Module (NVM) enabled | AnyConnect connector | Flow observations, inventory, labels |
 | **Cisco ISE** | Endpoint registered with Cisco ISE (any supported endpoint type) | ISE connector via pxGrid | Endpoint metadata (identity, posture, profile) |
-| **CSW host agent (for comparison)** | `csw-agent` / `CswAgent` on the workload (older clusters: `tetd` / `TetSensor`) | Direct sensor → cluster registration | Flow + process + software inventory + CVE + (optional) enforcement |
+| **CSW host agent (for comparison)** | `csw-agent` / `CswAgent` on the workload | Direct sensor → cluster registration | Flow + process + software inventory + CVE + (optional) enforcement |
 
 **Pick by need:**
 

@@ -105,7 +105,7 @@ across releases):
    convention some config-management cookbooks adopt. Verify the
    actual location for your release.*
 8. Starts and enables the agent service (`csw-agent` on current
-   releases; `tetd` on older releases)
+   releases)
 9. Registers with the cluster
 
 Expected end-of-run output (paraphrased — the exact wording
@@ -257,7 +257,7 @@ log out of the box.
 |---|---|---|
 | Script exits with `download failed: cannot reach <cluster>` | Workload can't reach the cluster on 443/TCP | Test with `curl -v https://<cluster>:443/`; open the firewall port; or pre-download the package and pass `--no-download --package-path /tmp/pkg.rpm` |
 | Script reports `OS not supported` | OS / kernel not on the matrix for this CSW release | Check the [Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html); consider Universal Visibility for niche kernels |
-| `tetd` started but registration is *Not Active* in UI | Outbound 443 reaches the cluster but the activation key was rejected | Regenerate the script in the UI (the key may have been rotated); rerun |
+| `csw-agent` started but registration is *Not Active* in UI | Outbound 443 reaches the cluster but the activation key was rejected | Regenerate the script in the UI (the key may have been rotated); rerun |
 | Registers under wrong scope | Script was generated for a different scope | Regenerate for the correct scope; or move the workload in the UI by changing the scope label |
 | Hangs at "validating package signature" | Time skew | `chronyc tracking` / `timedatectl` to confirm clock sync |
 

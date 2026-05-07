@@ -34,11 +34,9 @@ that supports the GCE startup-script daemon.
 # preventing public access)
 gsutil mb -p my-project -l us-central1 -b on gs://internal-csw-agents/
 
-# Upload the package + CA
-gsutil cp tet-sensor-3.x.y.z-1.el9.x86_64.rpm \
-  gs://internal-csw-agents/linux/el9/
-
-gsutil cp ca.pem gs://internal-csw-agents/linux/
+# Upload the CSW-generated installer script. Treat it as a secret
+# because it embeds activation material.
+gsutil cp tetration_linux_installer.sh gs://internal-csw-agents/linux/
 
 # Grant the VM's service account read access
 gcloud storage buckets add-iam-policy-binding gs://internal-csw-agents \
@@ -61,33 +59,14 @@ TOKEN=$(curl -s -H "Metadata-Flavor: Google" \
   "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
   | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')
 
-# Pull the agent package
+# Pull the CSW-generated installer script
 curl -s -L -H "Authorization: Bearer $TOKEN" \
-  -o /tmp/tet-sensor.rpm \
-  "https://storage.googleapis.com/internal-csw-agents/linux/el9/tet-sensor-3.x.y.z-1.el9.x86_64.rpm"
-
-# Pull the CA
-mkdir -p /etc/tetration && chmod 750 /etc/tetration
-curl -s -L -H "Authorization: Bearer $TOKEN" \
-  -o /etc/tetration/ca.pem \
-  "https://storage.googleapis.com/internal-csw-agents/linux/ca.pem"
-
-# Get activation key from Secret Manager
-ACTIVATION_KEY=$(curl -s -H "Authorization: Bearer $TOKEN" \
-  "https://secretmanager.googleapis.com/v1/projects/my-project/secrets/csw-activation-key-prod-web/versions/latest:access" \
-  | python3 -c 'import sys,json,base64; print(base64.b64decode(json.load(sys.stdin)["payload"]["data"]).decode())')
-
-cat > /etc/tetration/sensor.conf <<EOF
-ACTIVATION_KEY=$ACTIVATION_KEY
-SCOPE=prod:web-tier
-EOF
-chmod 640 /etc/tetration/sensor.conf
+  -o /tmp/tetration_linux_installer.sh \
+  "https://storage.googleapis.com/internal-csw-agents/linux/tetration_linux_installer.sh"
 
 # Install
-dnf install -y /tmp/tet-sensor.rpm
-
-# Start
-systemctl enable --now csw-agent
+chmod 700 /tmp/tetration_linux_installer.sh
+bash /tmp/tetration_linux_installer.sh
 ```
 
 ### Setting the metadata at instance launch

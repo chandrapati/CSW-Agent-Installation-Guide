@@ -197,10 +197,10 @@ Expected output (key lines):
      Active: active (running) since ...
 ```
 
-> **If you see `csw-agent.service` instead of `csw-agent.service`**:
+> **If you see `tetd.service` instead of `csw-agent.service`**:
 > you're on an older Tetration-era agent. The user-facing unit
 > was renamed to `csw-agent` in current CSW releases. The
-> commands and flags below are equivalent — substitute `tetd`
+> commands and flags below are equivalent — substitute `csw-agent`
 > for `csw-agent` if your install is the older naming.
 
 If `Active: failed`, jump to Step 6.

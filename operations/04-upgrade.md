@@ -103,7 +103,7 @@ install — the slower waves catch regressions early.
 - For golden-image patterns: keep the previous AMI / VHD / GCE
   image on the path until the new image has burned in for a
   week
-- For Helm: `helm rollback csw-sensor <previous-revision>`
+- For Helm: `helm rollback csw-agent <previous-revision>`
 
 ---
 
@@ -117,14 +117,13 @@ sudo journalctl -u csw-agent --since "10 minutes ago" | grep -E "(ERROR|FATAL)"
 ```
 
 ```powershell
-# Windows — Cisco's 4.0 docs reference both 'CswAgent' (current
-# releases) and 'TetSensor' (older releases); query/inspect both.
+# Windows
 Get-WmiObject -Class Win32_Product `
-  -Filter "Name like '%Cisco Secure Workload%' OR Name like '%TetSensor%' OR Name like '%Tetration%'" |
+  -Filter "Name like '%Cisco Secure Workload%' OR Name like '%Tetration%'" |
   Select-Object Name, Version
-Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue
-Get-WinEvent -LogName Application -ProviderName 'CswAgent','TetSensor' `
-  -MaxEvents 20 -ErrorAction SilentlyContinue
+Get-Service -Name CswAgent -ErrorAction SilentlyContinue
+Get-WinEvent -LogName Application -MaxEvents 50 |
+  Where-Object { $_.ProviderName -like '*Csw*' -or $_.ProviderName -like '*Cisco*' -or $_.Message -like '*CswAgent*' -or $_.Message -like '*Secure Workload*' }
 ```
 
 In CSW UI:

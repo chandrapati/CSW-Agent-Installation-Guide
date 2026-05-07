@@ -19,9 +19,9 @@ that supports `cloud-init`.
   Amazon Linux, Ubuntu, RHEL, SUSE official AMIs)
 - Outbound 443 from the instance to the CSW cluster (Internet
   Gateway, NAT Gateway, VPC peering, or Direct Connect)
-- The CSW agent payload reachable somewhere — three patterns:
-  - **Pattern A (recommended)**: a private S3 bucket holding
-    the agent `.rpm` / `.deb` and the cluster CA chain
+- The CSW installer reachable somewhere — three patterns:
+  - **Pattern A (recommended)**: a private S3 bucket holding the
+    CSW-generated `tetration_linux_installer.sh` from your cluster
   - **Pattern B**: workload reaches the cluster directly and
     runs the CSW-generated installer script (the script
     self-fetches the package from the cluster)
@@ -30,19 +30,21 @@ that supports `cloud-init`.
 
 ---
 
-## Pattern A — payload from a private S3 bucket
+## Pattern A — CSW-generated installer script from a private S3 bucket
 
-This is the cleanest steady-state pattern: the agent payload is
-stable, versioned, and IAM-controlled.
+This keeps the Cisco-supported install flow intact while making
+the script available through an IAM-controlled private bucket. Do
+not split the Cisco package into ad hoc `ca.pem` and
+`/etc/tetration/sensor.conf` files; Cisco's installer owns the
+site files and activation wiring.
 
 ### One-time setup
 
 ```bash
-# Stage the package and CA in a private S3 bucket
-aws s3 cp tet-sensor-3.x.y.z-1.el9.x86_64.rpm \
-  s3://internal-csw-agents/linux/el9/
-aws s3 cp ca.pem s3://internal-csw-agents/linux/
-aws s3 cp sensor.conf.template s3://internal-csw-agents/linux/
+# Stage the CSW-generated installer script in a private S3 bucket.
+# Treat this script as a secret because it embeds activation material.
+aws s3 cp tetration_linux_installer.sh \
+  s3://internal-csw-agents/linux/tetration_linux_installer.sh
 
 # Create an IAM policy that allows EC2 instances to read the bucket
 cat > csw-agent-pull-policy.json <<'EOF'
@@ -85,34 +87,15 @@ REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
 INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
   http://169.254.169.254/latest/meta-data/instance-id)
 
-# Pull payload from the internal bucket (instance role grants read)
+# Pull installer from the internal bucket (instance role grants read)
 aws s3 cp \
-  s3://internal-csw-agents/linux/el9/tet-sensor-3.x.y.z-1.el9.x86_64.rpm \
-  /tmp/tet-sensor.rpm \
+  s3://internal-csw-agents/linux/tetration_linux_installer.sh \
+  /tmp/tetration_linux_installer.sh \
   --region "$REGION"
 
-aws s3 cp s3://internal-csw-agents/linux/ca.pem \
-  /etc/tetration/ca.pem \
-  --region "$REGION" --quiet || true
-
-# Render the activation config (key from SSM Parameter Store)
-ACTIVATION_KEY=$(aws ssm get-parameter \
-  --name /csw/activation-key/prod-web \
-  --with-decryption \
-  --region "$REGION" \
-  --query Parameter.Value --output text)
-
-mkdir -p /etc/tetration
-chmod 750 /etc/tetration
-
-cat > /etc/tetration/sensor.conf <<EOF
-ACTIVATION_KEY=$ACTIVATION_KEY
-SCOPE=prod:web-tier
-EOF
-chmod 640 /etc/tetration/sensor.conf
-
 # Install
-dnf install -y /tmp/tet-sensor.rpm
+chmod 700 /tmp/tetration_linux_installer.sh
+bash /tmp/tetration_linux_installer.sh
 
 # Start
 systemctl enable --now csw-agent
@@ -256,7 +239,8 @@ Full troubleshooting in
 
 ## See also
 
-- [`./examples/terraform/aws-userdata.tf`](./examples/terraform/aws-userdata.tf) — runnable Terraform
+- Terraform example intentionally removed until it can be rebuilt
+  around the CSW-generated installer-script flow.
 - [`./examples/cloud-init/aws-csw-rhel9.sh`](./examples/cloud-init/aws-csw-rhel9.sh) — runnable user_data
 - [`04-terraform.md`](./04-terraform.md) — multi-cloud IaC patterns
 - [`05-golden-ami.md`](./05-golden-ami.md) — image-baked alternative

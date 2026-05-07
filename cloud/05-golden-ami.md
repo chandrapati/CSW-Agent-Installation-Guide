@@ -43,8 +43,8 @@ Key Vault).
   activation can target different scopes
 - **Pro:** the image doesn't carry an embedded activation key
   (smaller blast radius if the AMI leaks)
-- **Con:** still a small first-boot step (read SSM, write
-  sensor.conf, restart `csw-agent`)
+- **Con:** still depends on the Cisco golden-image behavior being
+  correct for your release and image pipeline.
 
 ### Pattern Y — Activate during image build
 
@@ -57,9 +57,8 @@ scope automatically.
 - **Con:** one image per scope (or you accept that all instances
   from this image start in the same scope and get re-labelled
   later)
-- **Con:** the image carries the activation key in
-  `/etc/tetration/sensor.conf` — treat the AMI as a sensitive
-  artefact accordingly
+- **Con:** the generated installer embeds activation material —
+  treat the AMI and build logs as sensitive artefacts accordingly.
 
 **Recommendation.** Pattern X is more flexible and the safer
 default. Pattern Y is appropriate when you have a clean
@@ -88,8 +87,7 @@ packer {
 variable "region"            { default = "us-east-1" }
 variable "base_ami_owner"    { default = "amazon" }       # public; replace with your org account ID
 variable "base_ami_name"     { default = "al2023-ami-*-x86_64" }
-variable "csw_agent_s3_uri"  { default = "s3://internal-csw-agents/linux/el9/tet-sensor-3.x.y.z-1.el9.x86_64.rpm" }
-variable "csw_ca_s3_uri"     { default = "s3://internal-csw-agents/linux/ca.pem" }
+variable "csw_installer_s3_uri" { default = "s3://internal-csw-agents/linux/tetration_linux_installer.sh" }
 variable "csw_agent_version" { default = "3.x.y.z" }
 
 source "amazon-ebs" "rhel9_csw" {
@@ -137,47 +135,14 @@ build {
     ]
   }
 
-  # Install the CSW agent (Pattern X — defer activation to first boot)
+  # Install the CSW agent using Cisco's golden-image flow.
   provisioner "shell" {
     inline = [
       "set -euxo pipefail",
-      "sudo mkdir -p /etc/tetration && sudo chmod 750 /etc/tetration",
-      "sudo aws s3 cp ${var.csw_agent_s3_uri} /tmp/tet-sensor.rpm",
-      "sudo aws s3 cp ${var.csw_ca_s3_uri} /etc/tetration/ca.pem",
-      "sudo dnf install -y /tmp/tet-sensor.rpm",
-      "sudo rm -f /tmp/tet-sensor.rpm",
-
-      # Disable the service so it doesn't start until first boot's user_data writes sensor.conf
-      "sudo systemctl disable csw-agent",
-      "sudo systemctl mask csw-agent",
-    ]
-  }
-
-  # Drop a first-boot oneshot service that reads sensor.conf from cloud-init,
-  # then unmasks and starts csw-agent.
-  provisioner "file" {
-    source      = "files/csw-first-boot.sh"
-    destination = "/tmp/csw-first-boot.sh"
-  }
-  provisioner "shell" {
-    inline = [
-      "sudo install -m 0755 /tmp/csw-first-boot.sh /usr/local/sbin/csw-first-boot.sh",
-      "sudo bash -c 'cat > /etc/systemd/system/csw-first-boot.service' <<'UNIT'",
-      "[Unit]",
-      "Description=Cisco Secure Workload first-boot activation",
-      "After=cloud-init-local.service network-online.target",
-      "Wants=network-online.target",
-      "ConditionPathExists=!/var/lib/csw-activated",
-      "",
-      "[Service]",
-      "Type=oneshot",
-      "ExecStart=/usr/local/sbin/csw-first-boot.sh",
-      "RemainAfterExit=yes",
-      "",
-      "[Install]",
-      "WantedBy=multi-user.target",
-      "UNIT",
-      "sudo systemctl enable csw-first-boot.service",
+      "sudo aws s3 cp ${var.csw_installer_s3_uri} /tmp/tetration_linux_installer.sh",
+      "sudo chmod 700 /tmp/tetration_linux_installer.sh",
+      "sudo bash /tmp/tetration_linux_installer.sh --golden-image",
+      "sudo rm -f /tmp/tetration_linux_installer.sh",
     ]
   }
 
@@ -186,53 +151,17 @@ build {
     inline = [
       "rpm -q tet-sensor",
       "ls -la /etc/tetration/",
-      "systemctl is-enabled csw-first-boot.service",
+      "systemctl status csw-agent || true",
     ]
   }
 }
 ```
 
-### `files/csw-first-boot.sh`
-
-```bash
-#!/bin/bash
-# CSW first-boot activation script.
-# Reads activation key from SSM, writes sensor.conf, starts csw-agent.
-
-set -euxo pipefail
-exec > /var/log/csw-first-boot.log 2>&1
-
-TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
-  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
-  http://169.254.169.254/latest/meta-data/placement/region)
-
-# Conventions: per-instance Tag csw_scope_param holds the SSM param name
-SSM_NAME=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
-  "http://169.254.169.254/latest/meta-data/tags/instance/csw_scope_param" \
-  || echo "/csw/activation-key/default")
-CSW_SCOPE=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
-  "http://169.254.169.254/latest/meta-data/tags/instance/csw_scope" \
-  || echo "default")
-
-ACTIVATION_KEY=$(aws ssm get-parameter --name "$SSM_NAME" \
-  --with-decryption --region "$REGION" --query Parameter.Value --output text)
-
-cat > /etc/tetration/sensor.conf <<EOF
-ACTIVATION_KEY=$ACTIVATION_KEY
-SCOPE=$CSW_SCOPE
-EOF
-chmod 640 /etc/tetration/sensor.conf
-
-systemctl unmask csw-agent
-systemctl enable --now csw-agent
-
-touch /var/lib/csw-activated
-```
-
-The instance's `user_data` doesn't need to do anything — the
-oneshot service does the work. Each launch template / ASG just
-needs the `csw_scope_param` and `csw_scope` tags set
+The instance's `user_data` should not write `sensor.conf` or
+unmask legacy service names. Cisco documents `--golden-image` as
+the control for image/template builds; rely on the generated
+installer behavior for your release and verify clones register
+correctly before promoting the AMI.
 appropriately.
 
 ---
@@ -353,7 +282,7 @@ activation key. Restrict `ami_users` / sharing accordingly.
 | Symptom | Cause | Fix |
 |---|---|---|
 | Packer build registers the agent against the cluster | `csw-agent` started during build | Mask the service before the build provisioner starts (see Pattern X above); use Pattern X instead of Y |
-| Image build succeeds but instances launched from it never start `csw-agent` | `csw-first-boot.service` failed silently | Check `/var/log/csw-first-boot.log` on a launched instance; usually a missing tag or SSM permission |
+| Image build succeeds but instances launched from it never start `csw-agent` | `csw-first-boot.service` failed silently | Check `agent logs` on a launched instance; usually a missing tag or SSM permission |
 | AMI reaches consumer accounts but `aws ssm get-parameter` fails | The launching account can't read the activation key parameter | Move the parameter to the launching account's SSM (or use cross-account parameter access via Resource Access Manager) |
 | Sensor inventory shows the build instance as a registered host | Same as gotcha 1 | Mask `csw-agent` during build; deregister the build instance from CSW UI |
 | Image build fails on `kernel-headers` mismatch | Build instance kernel doesn't match the headers package | Pin the kernel during the build (`dnf install kernel-X.Y.Z-N`); or run `dnf upgrade -y && reboot` before installing the agent |
@@ -384,7 +313,8 @@ activation key. Restrict `ami_users` / sharing accordingly.
 
 ## See also
 
-- [`./examples/packer/golden-ami-csw.pkr.hcl`](./examples/packer/golden-ami-csw.pkr.hcl) — runnable Packer template
+- Static Packer example intentionally removed until it can be
+  rebuilt around Cisco's `--golden-image` installer flow.
 - [`./examples/cloud-init/aws-csw-rhel9.sh`](./examples/cloud-init/aws-csw-rhel9.sh) — first-boot script that pairs with Pattern X
 - [`01-aws-userdata.md`](./01-aws-userdata.md) — first-boot alternative
 - [`04-terraform.md`](./04-terraform.md) — Terraform that consumes the AMI

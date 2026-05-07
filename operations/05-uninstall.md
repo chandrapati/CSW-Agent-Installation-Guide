@@ -47,20 +47,12 @@ decommissioned, also de-register from CSW (next section).
 ## Windows — Uninstall
 
 ```powershell
-# Cisco's 4.0 docs reference both 'CswAgent' (current releases) and
-# 'TetSensor' (older releases) — handle either.
+# Stop the service
+Stop-Service CswAgent -ErrorAction SilentlyContinue
+Set-Service -Name CswAgent -StartupType Disabled -ErrorAction SilentlyContinue
 
-# Stop whichever is present
-$svc = Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
-       Select-Object -First 1
-if ($null -ne $svc) {
-    Stop-Service -Name $svc.Name -Force -ErrorAction SilentlyContinue
-    Set-Service  -Name $svc.Name -StartupType Disabled -ErrorAction SilentlyContinue
-}
-
-# Uninstall the MSI — match either current or legacy product name
-$product = Get-WmiObject -Class Win32_Product -Filter `
-  "Name LIKE '%Cisco Secure Workload%' OR Name LIKE '%TetSensor%' OR Name LIKE '%Tetration Agent%'"
+# Uninstall the MSI
+$product = Get-WmiObject -Class Win32_Product -Filter "Name LIKE '%Cisco Secure Workload%' OR Name LIKE '%Tetration%'"
 if ($product) {
     $product.Uninstall()
 }
@@ -69,7 +61,7 @@ if ($product) {
 # msiexec /x {PRODUCT-CODE-FROM-INSTALL} /quiet /norestart
 
 # Confirm
-Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue   # Should be empty
+Get-Service -Name CswAgent -ErrorAction SilentlyContinue   # Should be empty
 Test-Path "$env:PROGRAMFILES\Cisco\Tetration"
 Test-Path "$env:PROGRAMFILES\Cisco Tetration"
 Test-Path "$env:PROGRAMDATA\Cisco\Tetration"
@@ -85,20 +77,17 @@ Remove-Item -Recurse -Force "$env:PROGRAMDATA\Cisco\Tetration" -ErrorAction Sile
 ### Helm
 
 ```bash
-helm uninstall csw-sensor -n csw-sensor
+helm uninstall <internal-release-name> -n tetration
 
-# Helm leaves the namespace and Secret behind by default
-kubectl delete secret csw-sensor-config -n csw-sensor
-kubectl delete namespace csw-sensor
+# Helm leaves namespace-scoped resources behind depending on chart design
+kubectl delete namespace tetration
 ```
 
 ### Raw manifest
 
 ```bash
-kubectl delete -n csw-sensor -f daemonset.yaml
-kubectl delete -n csw-sensor -f rbac.yaml
-kubectl delete secret csw-sensor-config -n csw-sensor
-kubectl delete namespace csw-sensor
+kubectl delete -n tetration -f csw-agent-generated.yaml
+kubectl delete namespace tetration
 ```
 
 The DaemonSet's host-path mounts are read-only — uninstall
@@ -209,7 +198,7 @@ usually a cleaner approach than a host-side shutdown handler.)
 | Kernel module still loaded after uninstall | Active connections still using the module | Reboot the host or `rmmod` after closing connections |
 | Host shows up as "Pending" in CSW for days | Uninstall but not decommissioned | Decommission via UI or API |
 | Decommissioned host re-appears | Sensor wasn't actually uninstalled; re-registered on its next heartbeat | Confirm `csw-agent` is gone on the host first, then decommission again |
-| Helm uninstall leaves the namespace | Default Helm behaviour | Explicit `kubectl delete namespace csw-sensor` |
+| Helm uninstall leaves the namespace | Default Helm behaviour | Explicit `kubectl delete namespace tetration` |
 
 ---
 

@@ -76,8 +76,7 @@ variable "image_resource_group"      { default = "rg-images" }
 variable "compute_gallery_name"      { default = "internalImages" }
 variable "image_definition_name"     { default = "rhel9-csw" }
 variable "image_version"             { default = "1.0.0" }
-variable "csw_agent_blob_url"        {}                   # https://...blob.core.windows.net/agents/...
-variable "csw_ca_blob_url"           {}
+variable "csw_installer_blob_url"    {}                   # https://...blob.core.windows.net/agents/linux/tetration_linux_installer.sh
 variable "location"                  { default = "eastus" }
 
 source "azure-arm" "rhel9_csw" {
@@ -122,51 +121,18 @@ build {
     ]
   }
 
-  # Install the CSW agent (Pattern X — defer activation)
+  # Install the CSW agent using Cisco's golden-image flow.
   provisioner "shell" {
     inline = [
       "set -euxo pipefail",
-      "sudo mkdir -p /etc/tetration && sudo chmod 750 /etc/tetration",
 
-      # Pull the agent payload via curl with managed-identity token
+      # Pull the CSW-generated installer script via curl with managed-identity token
       "TOKEN=$(curl -s -H 'Metadata: true' 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"access_token\"])')",
 
-      "sudo curl -s -L -H \"Authorization: Bearer $TOKEN\" -H \"x-ms-version: 2019-12-12\" -o /tmp/tet-sensor.rpm '${var.csw_agent_blob_url}'",
-
-      "sudo curl -s -L -H \"Authorization: Bearer $TOKEN\" -H \"x-ms-version: 2019-12-12\" -o /etc/tetration/ca.pem '${var.csw_ca_blob_url}'",
-
-      "sudo dnf install -y /tmp/tet-sensor.rpm",
-      "sudo rm -f /tmp/tet-sensor.rpm",
-
-      "sudo systemctl disable csw-agent",
-      "sudo systemctl mask csw-agent",
-    ]
-  }
-
-  # Drop the first-boot oneshot service
-  provisioner "file" {
-    source      = "files/csw-first-boot.sh"
-    destination = "/tmp/csw-first-boot.sh"
-  }
-  provisioner "shell" {
-    inline = [
-      "sudo install -m 0755 /tmp/csw-first-boot.sh /usr/local/sbin/csw-first-boot.sh",
-      "sudo bash -c 'cat > /etc/systemd/system/csw-first-boot.service' <<'UNIT'",
-      "[Unit]",
-      "Description=Cisco Secure Workload first-boot activation",
-      "After=cloud-init-local.service network-online.target",
-      "Wants=network-online.target",
-      "ConditionPathExists=!/var/lib/csw-activated",
-      "",
-      "[Service]",
-      "Type=oneshot",
-      "ExecStart=/usr/local/sbin/csw-first-boot.sh",
-      "RemainAfterExit=yes",
-      "",
-      "[Install]",
-      "WantedBy=multi-user.target",
-      "UNIT",
-      "sudo systemctl enable csw-first-boot.service",
+      "sudo curl -s -L -H \"Authorization: Bearer $TOKEN\" -H \"x-ms-version: 2019-12-12\" -o /tmp/tetration_linux_installer.sh '${var.csw_installer_blob_url}'",
+      "sudo chmod 700 /tmp/tetration_linux_installer.sh",
+      "sudo bash /tmp/tetration_linux_installer.sh --golden-image",
+      "sudo rm -f /tmp/tetration_linux_installer.sh",
     ]
   }
 
@@ -180,48 +146,11 @@ build {
 }
 ```
 
-### `files/csw-first-boot.sh`
-
-Same shape as the AWS first-boot script, but uses Azure
-metadata + Key Vault:
-
-```bash
-#!/bin/bash
-set -euxo pipefail
-exec > /var/log/csw-first-boot.log 2>&1
-
-# Wait for managed identity to be ready
-sleep 30
-
-# Get a Key Vault token via the VM's managed identity
-TOKEN=$(curl -s -H 'Metadata: true' \
-  'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://vault.azure.net' \
-  | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
-
-# Convention: VM tag csw_kv_secret holds the secret URL
-KV_SECRET_URL=$(curl -s -H 'Metadata: true' \
-  'http://169.254.169.254/metadata/instance/compute/tagsList?api-version=2021-12-13' \
-  | python3 -c 'import sys,json; tags={t["name"]:t["value"] for t in json.load(sys.stdin)}; print(tags.get("csw_kv_secret",""))')
-
-CSW_SCOPE=$(curl -s -H 'Metadata: true' \
-  'http://169.254.169.254/metadata/instance/compute/tagsList?api-version=2021-12-13' \
-  | python3 -c 'import sys,json; tags={t["name"]:t["value"] for t in json.load(sys.stdin)}; print(tags.get("csw_scope","default"))')
-
-ACTIVATION_KEY=$(curl -s -H "Authorization: Bearer $TOKEN" \
-  "${KV_SECRET_URL}?api-version=7.4" \
-  | python3 -c 'import sys,json;print(json.load(sys.stdin)["value"])')
-
-cat > /etc/tetration/sensor.conf <<EOF
-ACTIVATION_KEY=$ACTIVATION_KEY
-SCOPE=$CSW_SCOPE
-EOF
-chmod 640 /etc/tetration/sensor.conf
-
-systemctl unmask csw-agent
-systemctl enable --now csw-agent
-
-touch /var/lib/csw-activated
-```
+Do not add a first-boot script that writes `sensor.conf` or
+injects activation keys into `/etc/tetration`. Cisco documents the
+Linux `--golden-image` installer flag for image/template builds;
+use the generated installer behavior for your release and validate
+that cloned VMs register correctly before publishing the image.
 
 ---
 
@@ -237,8 +166,7 @@ packer build \
   -var "client_secret=$AZ_SECRET" \
   -var "tenant_id=$AZ_TENANT" \
   -var "image_version=1.0.0" \
-  -var "csw_agent_blob_url=https://internalcswagents.blob.core.windows.net/agents/linux/el9/tet-sensor-3.10.1.45-1.el9.x86_64.rpm" \
-  -var "csw_ca_blob_url=https://internalcswagents.blob.core.windows.net/agents/linux/ca.pem" \
+  -var "csw_installer_blob_url=https://internalcswagents.blob.core.windows.net/agents/linux/tetration_linux_installer.sh" \
   compute-gallery-csw.pkr.hcl
 ```
 

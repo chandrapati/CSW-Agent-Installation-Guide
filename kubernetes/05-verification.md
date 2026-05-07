@@ -9,18 +9,18 @@ checks with the **CSW UI** (*Manage → Agents → Software Agents*).
 
 ```bash
 # 1. DaemonSet rollout complete
-kubectl get ds -n csw-sensor csw-sensor
+kubectl get ds -n tetration
 # DESIRED == CURRENT == READY == UP-TO-DATE; no MISCONFIGURED
 
 # 2. One pod per node, all Running
-kubectl get pods -n csw-sensor -l app=csw-sensor -o wide
+kubectl get pods -n tetration -o wide
 
 # 3. Recent logs without ERROR / FATAL
-POD=$(kubectl -n csw-sensor get pods -l app=csw-sensor -o name | head -1)
-kubectl -n csw-sensor logs "$POD" --tail 50
+POD=$(kubectl -n tetration get pods -o name | head -1)
+kubectl -n tetration logs "$POD" --tail 50
 
 # 4. Sensor can see host network namespace
-kubectl -n csw-sensor exec "$POD" -- ss -tn 2>/dev/null | head -5
+kubectl -n tetration exec "$POD" -- ss -tn 2>/dev/null | head -5
 # Expect connections from the node IP (because hostNetwork: true)
 
 # 5. CSW UI: each node appears as a registered host
@@ -36,7 +36,7 @@ If 1–4 pass and 5 reports the node, the install is healthy.
 
 ```bash
 # Per-node pod placement
-kubectl get pods -n csw-sensor -l app=csw-sensor \
+kubectl get pods -n tetration \
   -o custom-columns=POD:.metadata.name,NODE:.spec.nodeName,STATUS:.status.phase
 
 # Nodes that should have the sensor (i.e., everything matching the
@@ -50,17 +50,17 @@ kubectl get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints
 ### Pod-level health
 
 ```bash
-POD=$(kubectl -n csw-sensor get pods -l app=csw-sensor -o name | head -1)
+POD=$(kubectl -n tetration get pods -o name | head -1)
 
 # Resource consumption
-kubectl top pod -n csw-sensor "$POD"
+kubectl top pod -n tetration "$POD"
 
 # Pod definition (verify hostNetwork, hostPID, privileged)
-kubectl get -n csw-sensor "$POD" -o jsonpath='{.spec.hostNetwork}{"\n"}{.spec.hostPID}{"\n"}{.spec.containers[0].securityContext.privileged}{"\n"}'
+kubectl get -n tetration "$POD" -o jsonpath='{.spec.hostNetwork}{"\n"}{.spec.hostPID}{"\n"}{.spec.containers[0].securityContext.privileged}{"\n"}'
 # Expected: true / true / true
 
 # Mounted host paths
-kubectl get -n csw-sensor "$POD" -o jsonpath='{range .spec.volumes[*]}{.name}{"\t"}{.hostPath.path}{"\n"}{end}'
+kubectl get -n tetration "$POD" -o jsonpath='{range .spec.volumes[*]}{.name}{"\t"}{.hostPath.path}{"\n"}{end}'
 # Expected: at least /proc, /sys, /var/log entries
 ```
 
@@ -69,7 +69,7 @@ kubectl get -n csw-sensor "$POD" -o jsonpath='{range .spec.volumes[*]}{.name}{"\
 From inside the sensor pod:
 
 ```bash
-kubectl -n csw-sensor exec "$POD" -- /bin/sh -c \
+kubectl -n tetration exec "$POD" -- /bin/sh -c \
   "curl -s -o /dev/null -w 'HTTP_CODE: %{http_code}\nCONNECT: %{time_connect}s\nTOTAL: %{time_total}s\n' https://csw.example.com:443/"
 ```
 

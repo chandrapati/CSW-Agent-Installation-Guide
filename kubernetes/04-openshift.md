@@ -3,8 +3,9 @@
 OpenShift / OKD adds **Security Context Constraints (SCC)** on
 top of standard Kubernetes Pod Security Admission. The CSW sensor
 is privileged and needs an SCC that permits privileged execution.
-Everything else (Helm chart, raw manifest, verification) follows
-the upstream pattern.
+Cisco's documented CSW 4.0 install path is still the **Agent
+Script Installer**. Use that first, then adjust OpenShift SCC
+policy only when admission events show it is required.
 
 ---
 
@@ -16,25 +17,28 @@ In addition to the items in
 - OpenShift 4.10+ (current support; check the matrix for
   older releases)
 - Cluster-admin (or equivalent SCC-binding rights)
-- A namespace dedicated to the sensor (don't reuse `default` or
-  any user-workload namespace)
+- The Cisco-documented `tetration` namespace created by the
+  installer
 
 ---
 
-## Step 1 — Create the namespace + ServiceAccount
+## Step 1 — Run the Cisco Agent Script Installer
 
-```bash
-oc new-project csw-sensor
-
-oc create serviceaccount csw-sensor -n csw-sensor
-```
+Generate the Kubernetes / OpenShift Agent Script Installer from
+the CSW UI and run it with an `oc` context that has the required
+cluster privileges. Cisco documents that Secure Workload entities
+are created in the `tetration` namespace.
 
 ---
 
-## Step 2 — Bind the privileged SCC to the ServiceAccount
+## Step 2 — If OpenShift blocks admission, bind the privileged SCC
 
 ```bash
-oc adm policy add-scc-to-user privileged -z csw-sensor -n csw-sensor
+# Replace <serviceaccount-from-generated-manifest> with the
+# ServiceAccount created by the Cisco installer.
+oc adm policy add-scc-to-user privileged \
+  -z <serviceaccount-from-generated-manifest> \
+  -n tetration
 ```
 
 This is the OpenShift-specific step that the upstream Helm chart
@@ -44,50 +48,30 @@ fail admission.
 To verify the binding:
 
 ```bash
-oc adm policy who-can use scc privileged -n csw-sensor
+oc adm policy who-can use scc privileged -n tetration
 ```
 
-You should see `system:serviceaccount:csw-sensor:csw-sensor` in
-the list.
+You should see the service account created by the Cisco installer
+in the list.
 
 ---
 
-## Step 3 — Create the activation Secret
+## Step 3 — Do not hand-create activation Secrets
 
-Same as upstream:
-
-```bash
-oc create secret generic csw-sensor-config \
-  --namespace csw-sensor \
-  --from-literal=cluster_endpoint='csw.example.com' \
-  --from-literal=activation_key='<key-from-CSW-UI>' \
-  --from-file=ca.pem=./ca.pem
-```
+Do not create a guessed Secret with keys such as `activation_key`
+or `ca.pem`. Use the Secret / ConfigMap produced by the Cisco
+installer. If your organization wraps the generated manifests in
+GitOps, copy the generated field names exactly.
 
 ---
 
-## Step 4 — Install via Helm or raw manifest
+## Step 4 — If using Helm / raw YAML internally
 
-### Option A: Helm
-
-OpenShift supports Helm 3.x via the OpenShift Helm Operator (or
-the `helm` CLI installed by the operator). Same as
-[01-daemonset-helm.md](./01-daemonset-helm.md):
-
-```bash
-helm install csw-sensor csw/sensor \
-  --namespace csw-sensor \
-  --version 3.x.y.z \
-  --values ./values.yaml \
-  --set serviceAccount.name=csw-sensor \
-  --set serviceAccount.create=false   # we already created it for SCC binding
-```
-
-### Option B: Raw manifest
-
-Same as [02-daemonset-yaml.md](./02-daemonset-yaml.md). Edit the
-DaemonSet's `serviceAccountName: csw-sensor` (already done in the
-example manifest) and apply.
+Cisco does not publish a Helm chart in the CSW 4.0 guide. If your
+team wraps the Cisco-generated manifests in Helm or raw YAML, keep
+the namespace, ServiceAccount, Secret / ConfigMap fields, image,
+and RBAC from the generated installer output unless you have
+validated a deliberate change.
 
 ---
 
@@ -95,11 +79,11 @@ example manifest) and apply.
 
 ```bash
 # Pods must be Running, one per node
-oc get ds -n csw-sensor csw-sensor
-oc get pods -n csw-sensor -o wide
+oc get ds -n tetration
+oc get pods -n tetration -o wide
 
 # If any pod fails admission, the events explain why:
-oc describe pod -n csw-sensor <pending-pod-name>
+oc describe pod -n tetration <pending-pod-name>
 # Look for "unable to validate against any security context constraint"
 ```
 
@@ -109,10 +93,10 @@ oc describe pod -n csw-sensor <pending-pod-name>
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Pods fail with `unable to validate against any security context constraint: provider "privileged"` | SCC not bound to the ServiceAccount | Re-run `oc adm policy add-scc-to-user privileged -z csw-sensor -n csw-sensor` |
+| Pods fail with `unable to validate against any security context constraint: provider "privileged"` | SCC not bound to the ServiceAccount | Bind `privileged` SCC to the ServiceAccount from the Cisco-generated manifest in the `tetration` namespace |
 | Pods fail with `unable to validate against any security context constraint` (no provider listed) | No SCC matches the pod's requested capabilities | The pod requests something not on `privileged` SCC; check the pod spec, usually a non-default capability or volume |
 | Sensor installs but reports no flows from pods running with `runAsNonRoot` enforcement | OpenShift's `restricted-v2` SCC randomises UIDs; the sensor still sees flows because it captures at the host network namespace, not the pod | This usually isn't an issue — verify with `oc exec` into a sensor pod and check `ss -tn` shows host connections |
-| Helm chart applies but the `serviceaccount` it creates doesn't have the SCC binding | The chart auto-created a ServiceAccount with a name you didn't bind | Set `serviceAccount.create=false` and `serviceAccount.name=csw-sensor` in values; or re-bind with the chart-created name |
+| Internal Helm chart applies but its ServiceAccount doesn't have the SCC binding | Internal chart drifted from the Cisco-generated manifest | Use the ServiceAccount from the generated manifest, or re-bind SCC to the chart-created ServiceAccount after validating the change |
 | OpenShift cluster updates restart sensor pods every cycle | Expected behaviour from machine-config rotation | Make sure observability picks up the disruption as a *known cause*, not a sensor failure |
 
 ---

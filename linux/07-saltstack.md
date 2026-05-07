@@ -6,6 +6,27 @@ a state in an existing top file.
 
 > Working state in [`./examples/salt/`](./examples/salt/).
 
+> **Authoritative source — please read.**
+> Cisco's documented Linux installation method is the per-cluster
+> **Agent Script Installer** (`install_sensor.sh`, generated from
+> *Manage → Workloads → Agents → Installer* in the CSW UI). That
+> script handles package install, CA placement, activation key
+> wiring, and service enable end-to-end.
+>
+> The patterns below — manage the `.rpm`/`.deb` plus a Salt-
+> templated `/etc/tetration/sensor.conf` and `/etc/tetration/ca.pem`
+> — are a **community config-management convention**. The paths
+> `/etc/tetration/sensor.conf` and `/etc/tetration/ca.pem` are
+> **not** paths the Cisco-shipped agent reads by default; the
+> agent's own config lives inside the install root (typically
+> `/usr/local/tet/`). If you adopt this pattern, either generate
+> an installer that has the activation key already baked in
+> (Cisco-supported) or add a Salt state that translates the
+> `/etc/tetration/` files into the format your release of the
+> agent actually consumes. If you don't already have that
+> translator, prefer wrapping the CSW-generated `install_sensor.sh`
+> in a `cmd.run` state instead.
+
 ---
 
 ## Prerequisites

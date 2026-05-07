@@ -147,8 +147,14 @@ $token = $tokenResp.access_token
 $h = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }
 
 # Pull MSI
-$msiUrl = "https://internalcswagents.blob.core.windows.net/agents/windows/TetrationAgentInstaller-3.x.y.z-x64.msi"
-Invoke-WebRequest -Uri $msiUrl -Headers $h -OutFile C:\Windows\Temp\TetSensor.msi
+# NOTE: replace the filename below with the exact installer name from
+# your CSW UI (Manage → Workloads → Agents → Installer). Older
+# releases name this `TetSensor.msi`; current releases name it
+# `TetrationAgentInstaller-<version>-x64.msi` (or release equivalent).
+$msiFilename = "TetrationAgentInstaller-3.x.y.z-x64.msi"
+$msiUrl = "https://internalcswagents.blob.core.windows.net/agents/windows/$msiFilename"
+$msiLocal = "C:\Windows\Temp\$msiFilename"
+Invoke-WebRequest -Uri $msiUrl -Headers $h -OutFile $msiLocal
 
 # Pull CA (on-prem clusters)
 $caUrl = "https://internalcswagents.blob.core.windows.net/agents/windows/ca.pem"
@@ -170,17 +176,19 @@ $secret = Invoke-RestMethod -Headers @{Authorization="Bearer $kvToken"} -Method 
 
 # Install
 $args = @(
-  "/i", '"C:\Windows\Temp\TetSensor.msi"',
+  "/i", "`"$msiLocal`"",
   "/quiet", "/norestart",
-  "/L*v", "C:\Windows\Temp\tetsensor-install.log"
+  "/L*v", "C:\Windows\Temp\csw-agent-install.log"
 )
 Start-Process -FilePath msiexec.exe -ArgumentList $args -Wait
 
-# Verify
+# Verify (release-agnostic — current releases use CswAgent;
+# older releases used TetSensor)
 Start-Sleep -Seconds 30
-$svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
+$svc = Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
+       Select-Object -First 1
 if (-not $svc -or $svc.Status -ne 'Running') {
-  Start-Service -Name CswAgent -ErrorAction Continue
+  if ($svc) { Start-Service -Name $svc.Name -ErrorAction Continue }
 }
 </powershell>
 ```

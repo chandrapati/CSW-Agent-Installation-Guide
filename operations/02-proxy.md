@@ -96,7 +96,7 @@ The Windows sensor reads proxy settings from a config under
 
 ```powershell
 # Stop the service
-Stop-Service CswAgent
+Stop-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue
 
 # Write the proxy config
 $cfg = @"
@@ -106,17 +106,23 @@ HTTPS_PROXY_PORT=8080
 Set-Content -Path "$env:PROGRAMDATA\Cisco\Tetration\proxy.conf" -Value $cfg
 
 # Start the service
-Start-Service CswAgent
+Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue | Select-Object -First 1 | Start-Service
 
-# Confirm
-Get-EventLog -LogName Application -Source TetSensor -Newest 10 |
+# Confirm — Cisco's docs use both 'CswAgent' (current releases) and
+# 'TetSensor' (older releases) as Application-log providers; query both.
+Get-WinEvent -LogName Application -ProviderName 'CswAgent','TetSensor' `
+  -MaxEvents 10 -ErrorAction SilentlyContinue |
   Where-Object { $_.Message -match 'proxy' }
 ```
 
 For MSI silent installs you can pass proxy as a property:
 
 ```powershell
-msiexec /i TetSensor.msi /quiet `
+# Replace <installer.msi> with the exact filename from your CSW UI
+# (Manage → Workloads → Agents → Installer). Older releases name
+# this `TetSensor.msi`; current releases use
+# `TetrationAgentInstaller-<version>-x64.msi` (or release equivalent).
+msiexec /i <installer.msi> /quiet `
   TET_PROXY_HOST=proxy.internal.example.com `
   TET_PROXY_PORT=8080
 ```
@@ -189,8 +195,10 @@ for this kind of mTLS-bound traffic.
 # Linux
 sudo journalctl -u csw-agent --since "10 minutes ago" | grep -E "(proxy|cluster)"
 
-# Windows
-Get-EventLog -LogName Application -Source TetSensor -Newest 30 |
+# Windows — query both possible providers (CswAgent on current
+# releases, TetSensor on older releases)
+Get-WinEvent -LogName Application -ProviderName 'CswAgent','TetSensor' `
+  -MaxEvents 30 -ErrorAction SilentlyContinue |
   Where-Object { $_.Message -match 'proxy|cluster' }
 ```
 

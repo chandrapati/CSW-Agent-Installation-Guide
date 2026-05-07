@@ -7,6 +7,18 @@ working? This is the post-install checklist for Windows hosts.
 > Software Agents*). The UI tells you what the cluster sees; this
 > doc tells you what the workload knows. Both views need to agree.
 
+> **Naming note.** Cisco's 4.0 documentation references **two**
+> Windows service names depending on the agent release:
+>
+> | Release | Service name | Process names |
+> |---|---|---|
+> | Current CSW 4.x | `CswAgent` | `CswEngine.exe` (deep visibility), `TetEnfC.exe` (enforcer) |
+> | Older releases | `TetSensor` | `TetSenEngine.exe` / `tetsen.exe` / `TetSensor.exe` |
+>
+> The PowerShell snippets below use `'CswAgent','TetSensor'` so
+> they work on both. Where a snippet still uses the bare legacy
+> name, it's flagged.
+
 ---
 
 ## Five-minute health check
@@ -14,21 +26,38 @@ working? This is the post-install checklist for Windows hosts.
 Run from an **elevated** PowerShell on the workload:
 
 ```powershell
+# Helper — find whichever CSW agent service is installed.
+$svc = Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
+       Select-Object -First 1
+if ($null -eq $svc) {
+    Write-Host "Neither CswAgent nor TetSensor service is installed."
+    return
+}
+
 # 1. Service is Running
-Get-Service -Name CswAgent
+$svc | Format-List Name, Status, StartType
 
-# 2. Service is set to start automatically
-(Get-Service -Name CswAgent).StartType
+# 2. Service is set to start automatically — already shown above
 
-# 3. Process is alive
-Get-Process -Name CswEngine -ErrorAction SilentlyContinue
+# 3. Process is alive — current releases use CswEngine; older use
+#    TetSensor / tetsen
+Get-Process -Name 'CswEngine','TetSensor','tetsen','TetSenEngine','TetEnfC' `
+            -ErrorAction SilentlyContinue
 
-# 4. Recent agent log (no errors in last 200 lines)
-$logRoot = "$env:ProgramData\Cisco\Tetration\Logs"
-Get-ChildItem -Path $logRoot -Recurse -Filter *.log |
-  Sort-Object LastWriteTime -Descending |
-  Select-Object -First 1 |
-  Get-Content -Tail 50
+# 4. Recent agent log (no errors in last 50 lines).
+# Log root path can differ across releases; check both common paths.
+$logRoots = @(
+    "$env:ProgramData\Cisco\Tetration\Logs",
+    "$env:ProgramFiles\Cisco Tetration\Logs",
+    "$env:ProgramFiles\Cisco\Tetration\Logs"
+) | Where-Object { Test-Path $_ }
+
+if ($logRoots) {
+    Get-ChildItem -Path $logRoots -Recurse -Filter *.log -ErrorAction SilentlyContinue |
+      Sort-Object LastWriteTime -Descending |
+      Select-Object -First 1 |
+      Get-Content -Tail 50
+}
 
 # 5. Outbound connectivity to cluster
 Test-NetConnection -ComputerName <cluster-fqdn> -Port 443 |
@@ -62,29 +91,34 @@ $paths | ForEach-Object {
 }
 ```
 
-### 2. Confirm `CswAgent` service is healthy
+### 2. Confirm the CSW agent service is healthy
 
 ```powershell
-$svc = Get-Service -Name CswAgent
+# Accept either service name
+$svc = Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
+       Select-Object -First 1
 $svc | Format-List *
 
 # Detailed view: process ID, start type, dependent services
-Get-CimInstance -ClassName Win32_Service -Filter "Name='CswAgent'" |
+Get-CimInstance -ClassName Win32_Service `
+  -Filter "Name='CswAgent' OR Name='TetSensor'" |
   Select-Object Name, State, StartMode, ProcessId, PathName
 ```
 
 Expected:
 - `Status: Running`
 - `StartType: Automatic`
-- `PathName` points into `C:\Program Files\Cisco Tetration\` (or
-  release-equivalent path)
+- `PathName` points into `C:\Program Files\Cisco Tetration\`,
+  `C:\Program Files\Cisco\Tetration\`, or release-equivalent path
 
 If the service is `Stopped`, attempt to start and capture errors:
 
 ```powershell
-Start-Service -Name CswAgent -ErrorAction Continue
-Start-Sleep -Seconds 5
-Get-Service -Name CswAgent
+if ($svc) {
+    Start-Service -Name $svc.Name -ErrorAction Continue
+    Start-Sleep -Seconds 5
+    Get-Service -Name $svc.Name
+}
 ```
 
 ### 3. Confirm related services (Enforcement mode)
@@ -121,10 +155,16 @@ Get-ItemProperty -Path $reg -ErrorAction SilentlyContinue |
 $cluster = '<cluster-fqdn>'
 Test-NetConnection -ComputerName $cluster -Port 443
 
-# Active connections from the sensor process
-Get-NetTCPConnection -State Established |
-  Where-Object { $_.OwningProcess -eq (Get-Process -Name CswEngine).Id } |
-  Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort
+# Active connections from the agent process — accept either
+# current (CswEngine) or legacy (TetSensor / tetsen) process name.
+$agentProc = Get-Process -Name 'CswEngine','TetSensor','tetsen','TetSenEngine' `
+                         -ErrorAction SilentlyContinue
+if ($agentProc) {
+    $agentPids = $agentProc | Select-Object -ExpandProperty Id
+    Get-NetTCPConnection -State Established |
+      Where-Object { $agentPids -contains $_.OwningProcess } |
+      Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort
+}
 ```
 
 ### 6. Confirm time sync
@@ -179,7 +219,9 @@ troubleshooting doc.
 ### PowerShell — full check on one host
 
 ```powershell
-# Verify-CswAgent.ps1
+# Verify-CswAgent.ps1 (filename kept as Verify-TetSensor.ps1 in
+# many internal repos for backward compatibility — the body
+# below is release-agnostic and accepts both names).
 [CmdletBinding()]
 param(
     [string] $ClusterFqdn = 'csw.example.com'
@@ -197,29 +239,34 @@ function Show-Result {
     if ($Detail) { Write-Host "  ($Detail)" -ForegroundColor DarkGray } else { Write-Host '' }
 }
 
-# 1. Service exists and Running
-$svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
+# 1. Service exists and Running — accept either current
+# (CswAgent) or legacy (TetSensor) name
+$svc = Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
+       Select-Object -First 1
 if ($null -eq $svc) {
-    Show-Result 'CswAgent service' 'FAIL' 'service not found'
+    Show-Result 'CSW agent service' 'FAIL' 'neither CswAgent nor TetSensor found'
 } elseif ($svc.Status -ne 'Running') {
-    Show-Result 'CswAgent service' 'FAIL' "status: $($svc.Status)"
+    Show-Result ("CSW agent service ({0})" -f $svc.Name) 'FAIL' "status: $($svc.Status)"
 } else {
-    Show-Result 'CswAgent service' 'PASS' 'Running'
+    Show-Result ("CSW agent service ({0})" -f $svc.Name) 'PASS' 'Running'
 }
 
 # 2. Set to Auto start
 if ($svc -and $svc.StartType -eq 'Automatic') {
-    Show-Result 'CswAgent StartType' 'PASS' 'Automatic'
+    Show-Result 'CSW agent StartType' 'PASS' 'Automatic'
 } elseif ($svc) {
-    Show-Result 'CswAgent StartType' 'WARN' "StartType=$($svc.StartType)"
+    Show-Result 'CSW agent StartType' 'WARN' "StartType=$($svc.StartType)"
 }
 
-# 3. Process alive
-$proc = Get-Process -Name CswEngine -ErrorAction SilentlyContinue
+# 3. Process alive — current releases use CswEngine; older use
+# TetSensor / tetsen / TetSenEngine
+$proc = Get-Process -Name 'CswEngine','TetSensor','tetsen','TetSenEngine' `
+                    -ErrorAction SilentlyContinue |
+        Select-Object -First 1
 if ($null -ne $proc) {
-    Show-Result 'CswEngine process' 'PASS' "PID $($proc.Id), WS $([int]($proc.WorkingSet/1MB)) MB"
+    Show-Result ("CSW agent process ({0})" -f $proc.ProcessName) 'PASS' "PID $($proc.Id), WS $([int]($proc.WorkingSet/1MB)) MB"
 } else {
-    Show-Result 'CswEngine process' 'FAIL' 'no process'
+    Show-Result 'CSW agent process' 'FAIL' 'no process'
 }
 
 # 4. Outbound to cluster
@@ -270,9 +317,11 @@ if ($timeStatus -match 'Last Successful Sync Time:\s*\d') {
    (`Test-NetConnection`)
 2. Confirm activation key matches the one currently valid in the
    CSW UI (regenerate from UI; reinstall)
-3. Check Application Event Log:
+3. Check Application Event Log — Cisco's 4.0 docs use both
+   `CswAgent` (current releases) and `TetSensor` (older releases):
    ```powershell
-   Get-WinEvent -LogName Application -ProviderName 'TetSensor*' -MaxEvents 100 |
+   Get-WinEvent -LogName Application `
+     -ProviderName 'CswAgent','TetSensor' -MaxEvents 100 -ErrorAction SilentlyContinue |
      Format-List TimeCreated, LevelDisplayName, Message
    ```
 4. If on-prem cluster: confirm CA chain is in the agent conf
@@ -284,7 +333,7 @@ if ($timeStatus -match 'Last Successful Sync Time:\s*\d') {
    noting unexpected stops:
    ```powershell
    Get-WinEvent -LogName System -FilterXPath "*[System[EventID=7034 or EventID=7031]]" -MaxEvents 50 |
-     Where-Object { $_.Message -like '*TetSensor*' -or $_.Message -like '*Tetration*' }
+     Where-Object { $_.Message -like '*CswAgent*' -or $_.Message -like '*TetSensor*' -or $_.Message -like '*Tetration*' -or $_.Message -like '*Cisco Secure Workload*' }
    ```
 2. Check for EDR / Defender quarantining the agent driver
 3. Open a TAC case with the evidence bundle from

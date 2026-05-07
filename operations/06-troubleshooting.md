@@ -13,7 +13,7 @@ Sensor installs cleanly?
   no  → check package install logs (yum / apt / msiexec verbose)
   yes ↓
 Service running?
-  no  → systemctl status csw-agent  (Linux) / Get-Service CswAgent (Windows)
+  no  → systemctl status csw-agent  (Linux) / Get-Service -Name 'CswAgent','TetSensor' (Windows)
         → check journalctl -u csw-agent / Application Event Log
   yes ↓
 Host can resolve cluster FQDN?
@@ -106,10 +106,13 @@ Look for:
   flapping; check network path
 - `Activation token rejected` → token expired or rotated; re-key
 
-Windows:
+Windows — Cisco's 4.0 docs use both `CswAgent` (current releases)
+and `TetSensor` (older releases) as Application-log providers;
+query both:
 ```powershell
-Get-EventLog -LogName Application -Source TetSensor -Newest 50 |
-  Where-Object { $_.EntryType -in 'Error','Warning' }
+Get-WinEvent -LogName Application -ProviderName 'CswAgent','TetSensor' `
+  -MaxEvents 50 -ErrorAction SilentlyContinue |
+  Where-Object { $_.LevelDisplayName -in 'Error','Warning' }
 ```
 
 ---

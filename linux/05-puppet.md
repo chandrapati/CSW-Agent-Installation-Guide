@@ -6,6 +6,27 @@ as a standalone module or a class in a profile.
 
 > Working manifest in [`./examples/puppet/`](./examples/puppet/).
 
+> **Authoritative source — please read.**
+> Cisco's documented Linux installation method is the per-cluster
+> **Agent Script Installer** (`install_sensor.sh`, generated from
+> *Manage → Workloads → Agents → Installer* in the CSW UI). That
+> script handles package install, CA placement, activation key
+> wiring, and service enable end-to-end.
+>
+> The patterns below — manage the `.rpm`/`.deb` plus a Puppet-
+> templated `/etc/tetration/sensor.conf` and `/etc/tetration/ca.pem`
+> — are a **community config-management convention**. The paths
+> `/etc/tetration/sensor.conf` and `/etc/tetration/ca.pem` are
+> **not** paths the Cisco-shipped agent reads by default; the
+> agent's own config lives inside the install root (typically
+> `/usr/local/tet/`). Treat the `/etc/tetration/` files as
+> Puppet-managed audit copies and either generate an installer
+> that has the activation key already baked in (Cisco-supported)
+> or run a wrapper that translates these into the format your
+> release of the agent actually consumes. If you don't already
+> have that wrapper, prefer wrapping the CSW-generated
+> `install_sensor.sh` in an `exec { ... }` resource instead.
+
 ---
 
 ## Prerequisites

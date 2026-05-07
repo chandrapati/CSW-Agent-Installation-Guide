@@ -60,24 +60,42 @@ Save as `Install-TetSensor.ps1` (also published in
 ```powershell
 # Install-TetSensor.ps1 — runs at machine startup as LocalSystem.
 # Idempotent: skips work if the agent is already installed and running.
+#
+# Cisco's 4.0 documentation references TWO Windows service names
+# depending on the agent release:
+#   * CswAgent  — current releases
+#   * TetSensor — older releases
+# This script accepts either, so it stays valid across a phased
+# fleet upgrade. The .ps1 filename is kept as Install-TetSensor.ps1
+# for backward compatibility with anything that already references
+# it from a GPO; the body is release-agnostic.
 
 $ErrorActionPreference = 'Stop'
-$logPath = "$env:WINDIR\Temp\Install-TetSensor.log"
+$logPath = "$env:WINDIR\Temp\Install-CswAgent.log"
 
 function Write-Log($msg) {
     $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     "$stamp  $msg" | Out-File -FilePath $logPath -Append -Encoding UTF8
 }
 
+function Get-CswAgentService {
+    Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
+      Select-Object -First 1
+}
+
 # Idempotency check
-$svc = Get-Service -Name 'CswAgent' -ErrorAction SilentlyContinue
+$svc = Get-CswAgentService
 if ($null -ne $svc -and $svc.Status -eq 'Running') {
-    Write-Log "CswAgent already installed and running. Nothing to do."
+    Write-Log ("CSW agent already installed and running (service: {0}). Nothing to do." -f $svc.Name)
     exit 0
 }
 
+# Replace with the exact installer filename from your CSW UI
+# (Manage → Workloads → Agents → Installer). Older releases name
+# this `TetSensor.msi`; current releases use
+# `TetrationAgentInstaller-<version>-x64.msi` (or release equivalent).
 $msiPath = '\\fileserver\CSW$\3.x.y.z\TetrationAgentInstaller-3.x.y.z-x64.msi'
-$installLog = "$env:WINDIR\Temp\tetsensor-install.log"
+$installLog = "$env:WINDIR\Temp\csw-agent-install.log"
 
 if (-not (Test-Path -LiteralPath $msiPath)) {
     Write-Log "MSI not reachable at $msiPath — aborting."
@@ -103,19 +121,19 @@ if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) {
 
 # Give the service a moment to start, then verify
 Start-Sleep -Seconds 30
-$svc = Get-Service -Name 'CswAgent' -ErrorAction SilentlyContinue
+$svc = Get-CswAgentService
 if ($null -eq $svc) {
-    Write-Log "CswAgent service not present after install."
+    Write-Log "Neither CswAgent nor TetSensor service is present after install."
     exit 3
 }
 if ($svc.Status -ne 'Running') {
-    Write-Log "CswAgent service installed but not Running (Status: $($svc.Status)). Attempting Start-Service."
-    Start-Service -Name 'CswAgent'
+    Write-Log ("Service '{0}' installed but not Running (Status: {1}). Attempting Start-Service." -f $svc.Name, $svc.Status)
+    Start-Service -Name $svc.Name
     Start-Sleep -Seconds 10
     $svc.Refresh()
 }
 
-Write-Log "CswAgent service final status: $($svc.Status)"
+Write-Log ("CSW agent service final status: {0} ({1})" -f $svc.Name, $svc.Status)
 exit 0
 ```
 
@@ -155,7 +173,7 @@ gpupdate /force
 Restart-Computer -Force
 
 # After reboot, check the startup script log
-Get-Content -Path C:\Windows\Temp\Install-TetSensor.log -Tail 50
+Get-Content -Path C:\Windows\Temp\Install-CswAgent.log -Tail 50
 ```
 
 ---
@@ -207,7 +225,7 @@ plan for it now or adopt SCCM / Intune.
 |---|---|---|
 | Startup script doesn't run | GPO not applying to the OU | `gpresult /h gpresult.html` on a target; confirm the GPO is in the *Applied* list |
 | Script runs but MSI install fails | Network share unreachable from `LocalSystem` context | Confirm the share's permissions include `Domain Computers` (machine accounts), not just user groups |
-| Startup script runs every boot, attempts reinstall | Idempotency check failed | Confirm service name (`CswAgent` on current releases; older releases used `TetSensor`) matches your release; some older releases use a different name |
+| Startup script runs every boot, attempts reinstall | Idempotency check failed | Confirm the script's service-name check matches your release: current releases install `CswAgent`; older releases install `TetSensor`. The example script ships with both names; edit if your release uses a different name |
 | Some hosts succeed, others timeout | Slow boot causing GPO timeout | Increase *Specify maximum wait time for Group Policy scripts*; or convert to a scheduled task that runs at boot with a longer grace period |
 | GPO auditing shows the script ran but no install log | `LocalSystem` lacks write access to the temp path | Verify `C:\Windows\Temp` is writable; or change `$logPath` to a different location |
 

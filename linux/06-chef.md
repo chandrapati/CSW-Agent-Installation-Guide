@@ -6,6 +6,27 @@ codebases as a standalone cookbook or as a recipe in a wrapper.
 
 > Working recipe in [`./examples/chef/`](./examples/chef/).
 
+> **Authoritative source — please read.**
+> Cisco's documented Linux installation method is the per-cluster
+> **Agent Script Installer** (`install_sensor.sh`, generated from
+> *Manage → Workloads → Agents → Installer* in the CSW UI). That
+> script handles package install, CA placement, activation key
+> wiring, and service enable end-to-end.
+>
+> The patterns below — manage the `.rpm`/`.deb` plus a Chef-
+> templated `/etc/tetration/sensor.conf` and `/etc/tetration/ca.pem`
+> — are a **community config-management convention**. The paths
+> `/etc/tetration/sensor.conf` and `/etc/tetration/ca.pem` are
+> **not** paths the Cisco-shipped agent reads by default; the
+> agent's own config lives inside the install root (typically
+> `/usr/local/tet/`). If you adopt this pattern, either generate
+> an installer that has the activation key already baked in
+> (Cisco-supported) or add a wrapper recipe that translates the
+> `/etc/tetration/` files into the format your release of the
+> agent actually consumes. If you don't already have that
+> wrapper, prefer wrapping the CSW-generated `install_sensor.sh`
+> in an `execute { ... }` resource instead.
+
 ---
 
 ## Prerequisites

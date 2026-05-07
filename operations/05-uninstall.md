@@ -47,12 +47,20 @@ decommissioned, also de-register from CSW (next section).
 ## Windows — Uninstall
 
 ```powershell
-# Stop the service
-Stop-Service CswAgent
-Set-Service -Name CswAgent -StartupType Disabled
+# Cisco's 4.0 docs reference both 'CswAgent' (current releases) and
+# 'TetSensor' (older releases) — handle either.
 
-# Uninstall the MSI
-$product = Get-WmiObject -Class Win32_Product -Filter "Name LIKE '%Cisco Secure Workload%'"
+# Stop whichever is present
+$svc = Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
+       Select-Object -First 1
+if ($null -ne $svc) {
+    Stop-Service -Name $svc.Name -Force -ErrorAction SilentlyContinue
+    Set-Service  -Name $svc.Name -StartupType Disabled -ErrorAction SilentlyContinue
+}
+
+# Uninstall the MSI — match either current or legacy product name
+$product = Get-WmiObject -Class Win32_Product -Filter `
+  "Name LIKE '%Cisco Secure Workload%' OR Name LIKE '%TetSensor%' OR Name LIKE '%Tetration Agent%'"
 if ($product) {
     $product.Uninstall()
 }
@@ -61,8 +69,9 @@ if ($product) {
 # msiexec /x {PRODUCT-CODE-FROM-INSTALL} /quiet /norestart
 
 # Confirm
-Get-Service -Name CswAgent 2>$null   # Should error (service gone)
+Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue   # Should be empty
 Test-Path "$env:PROGRAMFILES\Cisco\Tetration"
+Test-Path "$env:PROGRAMFILES\Cisco Tetration"
 Test-Path "$env:PROGRAMDATA\Cisco\Tetration"
 
 # Remove leftover config (MSI sometimes leaves ProgramData)

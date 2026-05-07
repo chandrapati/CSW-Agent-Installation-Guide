@@ -85,21 +85,33 @@ chmod +x /tmp/install_sensor.sh
 sudo /tmp/install_sensor.sh
 ```
 
-The script:
+The script (paraphrased — Cisco's documentation describes
+behaviour at a high level; specific paths and service names vary
+across releases):
 
 1. Checks the OS / kernel against its supported list
 2. (Optional) prompts for proxy details if it can't reach the
    cluster directly
 3. Downloads the agent package over HTTPS from the cluster
 4. Validates the package signature
-5. Deposits the cluster CA chain (on-prem) at `/etc/tetration/ca.pem`
+5. Drops the cluster CA chain into the agent install directory
+   (Cisco bundles this as `ca.cert` inside the install root —
+   typically `/usr/local/tet/`)
 6. Installs the package via `rpm` / `dpkg`
-7. Writes the cluster URL and activation key to
-   `/etc/tetration/sensor.conf` (or release-equivalent)
-8. Starts and enables the `csw-agent` service
+7. Writes the cluster URL and activation key into the
+   release-specific sensor config inside the install root.
+   *Some community guides reference `/etc/tetration/sensor.conf`
+   — that is **not** the path Cisco's installer uses; it is a
+   convention some config-management cookbooks adopt. Verify the
+   actual location for your release.*
+8. Starts and enables the agent service (`csw-agent` on current
+   releases; `tetd` on older releases)
 9. Registers with the cluster
 
-Expected end-of-run output (paraphrased):
+Expected end-of-run output (paraphrased — the exact wording
+depends on the release; the screen-cap in your CSW UI's
+*Manage → Workloads → Agents → Installer → View installer log*
+panel is authoritative):
 
 ```
 [INFO] Sensor installation complete
@@ -245,7 +257,7 @@ log out of the box.
 |---|---|---|
 | Script exits with `download failed: cannot reach <cluster>` | Workload can't reach the cluster on 443/TCP | Test with `curl -v https://<cluster>:443/`; open the firewall port; or pre-download the package and pass `--no-download --package-path /tmp/pkg.rpm` |
 | Script reports `OS not supported` | OS / kernel not on the matrix for this CSW release | Check the [Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html); consider Universal Visibility for niche kernels |
-| `csw-agent` started but registration is *Not Active* in UI | Outbound 443 reaches the cluster but the activation key was rejected | Regenerate the script in the UI (the key may have been rotated); rerun |
+| `tetd` started but registration is *Not Active* in UI | Outbound 443 reaches the cluster but the activation key was rejected | Regenerate the script in the UI (the key may have been rotated); rerun |
 | Registers under wrong scope | Script was generated for a different scope | Regenerate for the correct scope; or move the workload in the UI by changing the scope label |
 | Hangs at "validating package signature" | Time skew | `chronyc tracking` / `timedatectl` to confirm clock sync |
 

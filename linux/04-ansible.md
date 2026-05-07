@@ -9,6 +9,35 @@ for fully automated, idempotent rollout and upgrade.
 > Working playbooks and inventory examples in
 > [`./examples/ansible/`](./examples/ansible/).
 
+> **Authoritative source — please read.**
+> Cisco's documented Linux installation method is the per-cluster
+> **Agent Script Installer** (`install_sensor.sh`, generated from
+> *Manage → Workloads → Agents → Installer* in the CSW UI). That
+> script handles package install, CA placement, activation key
+> wiring, and service enable end-to-end. Pattern A below — push
+> that installer with Ansible — is the closest fit to Cisco's
+> documented flow and is what we recommend.
+>
+> Patterns B and C (manual `.rpm`/`.deb` plus a config file at
+> `/etc/tetration/sensor.conf` and a CA at `/etc/tetration/ca.pem`)
+> are a **community config-management convention** that some
+> shops use to keep the activation key and cluster URL in
+> Ansible-managed templates. Those paths are **not paths the
+> Cisco-shipped agent reads by default** — the agent's own
+> config lives inside the install root (typically
+> `/usr/local/tet/`). If you want to use this convention you
+> must either:
+>
+> 1. Generate an installer that has the activation key already
+>    baked in (Cisco-supported), and treat the `/etc/tetration/`
+>    files as your *audit copy*, not the live config; or
+> 2. Roll your own wrapper that translates
+>    `/etc/tetration/sensor.conf` into the format the installed
+>    agent actually consumes for your release.
+>
+> If you don't already have a maintained internal pattern for
+> option 2, prefer Pattern A.
+
 ---
 
 ## Prerequisites
@@ -71,8 +100,7 @@ thing per host.
 
     - name: Ensure csw-agent is running and enabled
       ansible.builtin.systemd:
-        name: csw-agent
-        state: started
+        name: csw-agent        state: started
         enabled: true
         daemon_reload: true
 
@@ -195,8 +223,7 @@ up an internal repo.
 
     - name: Ensure csw-agent is running and enabled
       ansible.builtin.systemd:
-        name: csw-agent
-        state: started
+        name: csw-agent        state: started
         enabled: true
         daemon_reload: true
 
@@ -265,8 +292,7 @@ package manager.
 
     - name: Ensure csw-agent running and enabled
       ansible.builtin.systemd:
-        name: csw-agent
-        state: started
+        name: csw-agent        state: started
         enabled: true
         daemon_reload: true
 ```
@@ -322,9 +348,9 @@ vault_csw_activation_key_prod: "<key-from-CSW-UI>"
 
     - name: Confirm csw-agent is active
       ansible.builtin.command: systemctl is-active csw-agent
-      register: csw_agent_state
+      register: tetd_state
       changed_when: false
-      failed_when: csw_agent_state.stdout.strip() != 'active'
+      failed_when: tetd_state.stdout.strip() != 'active'
 
     - name: Confirm sensor can reach cluster (port open)
       ansible.builtin.wait_for:

@@ -2,7 +2,8 @@
 
 For cloud-managed Windows estates (Azure AD-joined, Intune
 enrolled). Package the CSW MSI as a Win32 app, define a detection
-rule that watches the `CswAgent` service, deploy as Required to
+rule that watches the CSW agent service (`CswAgent` on current
+releases; `TetSensor` on older releases), deploy as Required to
 the device group. Optionally add a custom compliance setting that
 flags devices where the agent isn't running.
 
@@ -81,16 +82,20 @@ In the Intune admin centre:
    [`./examples/intune/detection-tetsensor.ps1`](./examples/intune/detection-tetsensor.ps1):
 
    ```powershell
-   # Returns Compliant only when CswAgent service is Running.
+   # Returns "detected" only when the CSW agent service is Running.
    # Intune reads STDOUT and a 0 exit code as "detected".
-   $svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
+   #
+   # Cisco's 4.0 docs reference both 'CswAgent' (current releases)
+   # and 'TetSensor' (older releases) — accept either.
+   $svc = Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
+          Select-Object -First 1
    if ($null -eq $svc) {
        exit 1
    }
    if ($svc.Status -ne 'Running') {
        exit 1
    }
-   Write-Output "Cisco Secure Workload sensor present and running"
+   Write-Output ("Cisco Secure Workload agent present and running (service: {0})" -f $svc.Name)
    exit 0
    ```
 
@@ -125,20 +130,23 @@ the agent isn't running. Conditional Access can then react.
      with one or more named values:
 
      ```powershell
-     $svc = Get-Service -Name CswAgent -ErrorAction SilentlyContinue
+     # Cisco's 4.0 docs reference both 'CswAgent' (current releases)
+     # and 'TetSensor' (older releases) — accept either.
+     $svc = Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
+            Select-Object -First 1
      $running = ($svc -ne $null) -and ($svc.Status -eq 'Running')
      # Output a single JSON object
-     @{ TetSensorRunning = if ($running) { "true" } else { "false" } } |
+     @{ CswAgentRunning = if ($running) { "true" } else { "false" } } |
        ConvertTo-Json -Compress
      ```
 
-   - A **JSON rule file** that asserts `TetSensorRunning == "true"`:
+   - A **JSON rule file** that asserts `CswAgentRunning == "true"`:
 
      ```json
      {
        "Rules": [
          {
-           "SettingName": "TetSensorRunning",
+           "SettingName": "CswAgentRunning",
            "Operator": "IsEquals",
            "DataType": "String",
            "Operand": "true",

@@ -117,11 +117,14 @@ sudo journalctl -u csw-agent --since "10 minutes ago" | grep -E "(ERROR|FATAL)"
 ```
 
 ```powershell
-# Windows
-Get-WmiObject -Class Win32_Product -Filter "Name like '%Cisco Secure Workload%'" |
+# Windows — Cisco's 4.0 docs reference both 'CswAgent' (current
+# releases) and 'TetSensor' (older releases); query/inspect both.
+Get-WmiObject -Class Win32_Product `
+  -Filter "Name like '%Cisco Secure Workload%' OR Name like '%TetSensor%' OR Name like '%Tetration%'" |
   Select-Object Name, Version
-Get-Service -Name CswAgent
-Get-EventLog -LogName Application -Source TetSensor -Newest 20
+Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue
+Get-WinEvent -LogName Application -ProviderName 'CswAgent','TetSensor' `
+  -MaxEvents 20 -ErrorAction SilentlyContinue
 ```
 
 In CSW UI:

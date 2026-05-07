@@ -1,5 +1,15 @@
 # Managed by Ansible — do not edit by hand.
-# Renders to /etc/tetration/sensor.conf and is read by csw-agent at start.
+#
+# CAVEAT: /etc/tetration/sensor.conf is a community
+# config-management convention, NOT a path the Cisco-shipped CSW
+# agent reads by default. The agent reads its sensor config from
+# inside its install root (typically /usr/local/tet/). If you use
+# this template, you must either:
+#   1. Generate an installer that already has the activation key
+#      baked in (Cisco-supported), and treat this file as an
+#      Ansible-managed audit copy; or
+#   2. Add a wrapper task that translates this file into the
+#      format your release of the agent actually consumes.
 ACTIVATION_KEY={{ csw_activation_key }}
 SCOPE={{ csw_scope }}
 {% if csw_proxy_host is defined %}

@@ -1,11 +1,25 @@
 # Install-TetSensor.ps1
-# GPO startup script — installs the Cisco Secure Workload sensor MSI silently.
-# Runs as LocalSystem at machine boot. Idempotent.
+# GPO startup script — installs the Cisco Secure Workload (CSW) agent
+# MSI silently. Runs as LocalSystem at machine boot. Idempotent.
+#
+# Cisco's 4.0 documentation references TWO Windows service names
+# depending on the agent release:
+#   * CswAgent  — current releases (display name "Cisco Secure
+#                 Workload Deep Visibility")
+#   * TetSensor — older releases
+# This script accepts either, so it stays valid across a phased
+# fleet upgrade.
+#
+# The filename is kept as `Install-TetSensor.ps1` for backward
+# compatibility with anything that already references it from a
+# GPO. The script body is release-agnostic.
 #
 # Stage this file alongside the MSI on the GPO content share, e.g.:
-#   \\fileserver\CSW$\3.x.y.z\
+#   \\fileserver\CSW$\<version>\
 #       Install-TetSensor.ps1
-#       TetrationAgentInstaller-3.x.y.z-x64.msi
+#       TetrationAgentInstaller-<version>-x64.msi   # current releases
+#       (or)
+#       TetSensor.msi                               # older releases
 #
 # Reference from: Computer Configuration → Policies → Windows Settings →
 #                 Scripts (Startup/Shutdown) → Startup → PowerShell Scripts → Add
@@ -15,7 +29,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$logPath = "$env:WINDIR\Temp\Install-TetSensor.log"
+$logPath = "$env:WINDIR\Temp\Install-CswAgent.log"
 
 function Write-Log {
     param([string] $Message)
@@ -23,11 +37,18 @@ function Write-Log {
     "$stamp  $Message" | Out-File -FilePath $logPath -Append -Encoding UTF8
 }
 
+# Helper: returns the running CSW service object (CswAgent or
+# TetSensor), or $null if neither is present.
+function Get-CswAgentService {
+    Get-Service -Name 'CswAgent','TetSensor' -ErrorAction SilentlyContinue |
+      Select-Object -First 1
+}
+
 try {
     # Idempotency check: agent already healthy?
-    $svc = Get-Service -Name 'CswAgent' -ErrorAction SilentlyContinue
+    $svc = Get-CswAgentService
     if ($null -ne $svc -and $svc.Status -eq 'Running') {
-        Write-Log "CswAgent already installed and running. Nothing to do."
+        Write-Log ("CSW agent already installed and running (service: {0}). Nothing to do." -f $svc.Name)
         exit 0
     }
 
@@ -37,7 +58,7 @@ try {
     }
 
     Write-Log "Starting MSI install: $MsiSharePath"
-    $installLog = "$env:WINDIR\Temp\tetsensor-install.log"
+    $installLog = "$env:WINDIR\Temp\csw-agent-install.log"
 
     $proc = Start-Process -FilePath 'msiexec.exe' -ArgumentList @(
         '/i', "`"$MsiSharePath`"",
@@ -54,18 +75,18 @@ try {
 
     # Wait for the service to come up
     Start-Sleep -Seconds 30
-    $svc = Get-Service -Name 'CswAgent' -ErrorAction SilentlyContinue
+    $svc = Get-CswAgentService
     if ($null -eq $svc) {
-        Write-Log "CswAgent service not present after install."
+        Write-Log "Neither CswAgent nor TetSensor service is present after install."
         exit 3
     }
     if ($svc.Status -ne 'Running') {
-        Write-Log "Service installed but not Running ($($svc.Status)); attempting Start-Service."
-        Start-Service -Name 'CswAgent'
+        Write-Log ("Service '{0}' installed but not Running ({1}); attempting Start-Service." -f $svc.Name, $svc.Status)
+        Start-Service -Name $svc.Name
         Start-Sleep -Seconds 10
         $svc.Refresh()
     }
-    Write-Log "CswAgent service final status: $($svc.Status)"
+    Write-Log ("CSW agent service final status: {0} ({1})" -f $svc.Name, $svc.Status)
     exit 0
 } catch {
     Write-Log "Unhandled error: $($_.Exception.Message)"

@@ -306,3 +306,22 @@ For incidents on a deployed cluster,
 
 This document should receive subject-matter-expert review before
 being used to gate any production change.
+
+---
+
+## Related Cisco Secure Workload Resources
+
+Other public repositories covering the full Cisco Secure Workload journey — from onboarding to compliance reporting:
+
+| Repository | What It Covers | Best For |
+|---|---|---|
+| [**csw-splunk-integration**](https://github.com/chandrapati/csw-splunk-integration) | Step-by-step CSW → Splunk integration via Syslog connector and Cisco Security Cloud App | Security operations teams |
+| [**CSW-User-Education**](https://github.com/chandrapati/CSW-User-Education) | Intro guide, curated video library, and customer onboarding runbook | Anyone new to CSW — great first stop |
+| [**CSW-Policy-Lifecycle**](https://github.com/chandrapati/CSW-Policy-Lifecycle) | Full policy lifecycle: ADM discovery → Monitor → Simulate → Enforce + day-2 ops | SE/SA and customer engineering |
+| [**CSW-Compliance-Mapping**](https://github.com/chandrapati/CSW-Compliance-Mapping) | Compliance reports for HIPAA, SOC 2, PCI DSS v4, NIST 800-53, ISO 27001, CISA ZTMM, FIPS 140 | CISO, GRC, and audit teams |
+| [**CSW-Tenant-Insights**](https://github.com/chandrapati/CSW-Tenant-Insights) | CISO and POV reports generated from live tenant evidence | Executive stakeholders and POV wrap-ups |
+| [**CSW\_POV\_Template**](https://github.com/chandrapati/CSW_POV_Template) | Reusable POV engagement toolkit — clone for each new engagement | SEs running a CSW proof-of-value |
+| [**csw\_blast\_radius\_demo**](https://github.com/chandrapati/csw_blast_radius_demo) | Hands-on demo showing blast radius reduction via microsegmentation | Demo and lab environments |
+
+> **Suggested path for a new customer:**
+> CSW-User-Education → CSW-Agent-Installation-Guide → CSW-Policy-Lifecycle → csw-splunk-integration → CSW-Compliance-Mapping → CSW-Tenant-Insights

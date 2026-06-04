@@ -81,7 +81,7 @@ only when ready to enforce.
 - **Windows** — Windows Server (with explicit notes about
   2008 R2 needing Npcap; modern releases use the in-box
   `ndiscap.sys`). See
-  [`../windows/02-troubleshooting.md`](../windows/02-troubleshooting.md).
+  [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md).
 - **AIX** — Cisco's chapter has a dedicated *Install AIX
   Agents* section. Enforcement on AIX is not advertised in the
   same way as Linux / Windows; treat AIX as visibility-first

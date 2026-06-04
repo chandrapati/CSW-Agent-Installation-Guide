@@ -43,6 +43,37 @@ telemetry into a working policy workspace"* without surprises.
 
 ---
 
+## For executives — at a glance
+
+> **CISO / CIO read.** Agent installation is the *foundation* step:
+> nothing downstream — visibility, segmentation, or compliance evidence —
+> works until workloads are reporting. The business case lives in
+> [CSW-User-Education](https://github.com/chandrapati/CSW-User-Education)
+> and [CSW-Compliance-Mapping](https://github.com/chandrapati/CSW-Compliance-Mapping);
+> what to do *after* agents report is in
+> [CSW-Policy-Lifecycle](https://github.com/chandrapati/CSW-Policy-Lifecycle).
+
+- **What gets installed.** A lightweight host **agent** on each
+  server / VM / container that observes processes and network flows;
+  **agentless cloud connectors** cover AWS / Azure / GCP where an agent
+  isn't deployed.
+- **Does it risk my apps?** No. The agent installs in **visibility**
+  (observe-only) — it reports telemetry and does **not** block traffic.
+  Enforcement is a deliberate, later decision turned on per workload via
+  policy, not by the install itself.
+- **Coverage is the metric.** The goal of this phase is simple and
+  measurable: **every in-scope workload reporting**, reconciled against
+  your CMDB / cloud inventory. Gaps here become blind spots in every
+  audit and incident later.
+- **Scale path.** Manual install to validate, then automate at fleet
+  scale (Ansible / Puppet / Chef / SaltStack, cloud user-data / golden
+  images, K8s DaemonSet). See the decision matrix below.
+- **Status / trust.** Draft v1, cross-referenced to the **CSW 4.0**
+  User Guide (May 2026 audit). The User Guide is authoritative for your
+  specific release.
+
+---
+
 ## What's in this repo
 
 ```

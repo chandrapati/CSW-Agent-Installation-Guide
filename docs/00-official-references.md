@@ -512,10 +512,8 @@ also** block that points back to:
 
 - The relevant section of the CSW User Guide
 - This document (`docs/00-official-references.md`)
-- The companion repos
+- The companion repo
   [`CSW-Compliance-Mapping`](https://github.com/chandrapati/CSW-Compliance-Mapping)
-  and
-  [`CSW-Tenant-Insights`](https://github.com/chandrapati/CSW-Tenant-Insights)
 
 If a runbook in this repo contradicts the User Guide for your
 specific release, **the User Guide wins**. Open an issue on this

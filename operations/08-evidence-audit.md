@@ -179,16 +179,10 @@ vulns = client.get("/openapi/v1/vulnerabilities").json()
 events = client.get("/openapi/v1/policy_events").json()
 ```
 
-The companion
-[`CSW-Tenant-Insights`](https://github.com/chandrapati/CSW-Tenant-Insights)
-repo has working examples — including the executive-report
-generators that wrap a lot of this logic.
-
 ---
 
 ## See also
 
 - [`CSW-Compliance-Mapping`](https://github.com/chandrapati/CSW-Compliance-Mapping) — control-by-control mappings
-- [`CSW-Tenant-Insights`](https://github.com/chandrapati/CSW-Tenant-Insights) — executive reporting
 - [`07-enforcement-rollout.md`](./07-enforcement-rollout.md) — posture evidence ties closely to the enforcement workflow
 - [`05-uninstall.md`](./05-uninstall.md) — decommission evidence

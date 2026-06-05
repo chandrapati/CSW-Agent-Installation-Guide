@@ -107,6 +107,7 @@ telemetry into a working policy workspace"* without surprises.
   - [`examples/`](./windows/examples/) — Intune detection scripts, GPO templates
 - [`tanium/`](./tanium/) — Tanium Deploy / Provision (Linux + Windows)
   - [`README.md`](./tanium/README.md) — package layout, **`user.cfg` pre-staging**, rollout
+  - [`TANIUM-DEPLOYMENT-CHECKLIST.pdf`](./tanium/TANIUM-DEPLOYMENT-CHECKLIST.pdf) — one-page field checklist (PDF/DOCX)
   - [`examples/`](./tanium/examples/) — staging scripts + install wrappers
 - [`cloud/`](./cloud/) — cloud-VM installation patterns
   - [`README.md`](./cloud/README.md)

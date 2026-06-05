@@ -6,6 +6,12 @@ Linux and Windows endpoints where your deployment tooling ships the **Cisco
 Agent Image Installer bundle** or the **Agent Script Installer** together with
 a **`user.cfg`** file.
 
+> **One-page checklist for deployment teams:**
+> [`TANIUM-DEPLOYMENT-CHECKLIST.pdf`](./TANIUM-DEPLOYMENT-CHECKLIST.pdf)
+> ([`.md` source](./TANIUM-DEPLOYMENT-CHECKLIST.md) ·
+> [`.docx`](./TANIUM-DEPLOYMENT-CHECKLIST.docx) · rebuild:
+> `./build-checklist-pdf.sh`)
+
 > **Non-negotiable for automated deployments.** Cisco documents that agents
 > register using an **activation key** configured in the **user configuration
 > file before installation**. For Tanium (and every other orchestrator that

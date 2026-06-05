@@ -76,72 +76,69 @@ telemetry into a working policy workspace"* without surprises.
 
 ## What's in this repo
 
-```
-CSW-Agent-Installation-Guide/
-├── README.md                  ← you are here (overview + decision matrix)
-├── INDEX.md                   ← jump table by OS / by automation tool / by question
-├── docs/                      ← background concepts (read first)
-│   ├── 00-official-references.md    ← CSW 4.0 official docs cross-reference (read first!)
-│   ├── 01-prerequisites.md          ← network, ports, certs, OS support, sizing
-│   ├── 02-sensor-types.md           ← Deep Visibility, Enforcement, UV, NVM, HW, Cloud
-│   ├── 03-decision-matrix.md        ← which method for which environment
-│   ├── 04-rollout-strategy.md       ← Monitor → Simulate → Enforce
-│   └── 05-anyconnect-ise-alternatives.md ← when no CSW agent is needed (NVM / ISE)
-├── linux/                     ← all Linux installation methods
-│   ├── README.md
-│   ├── 01-manual-rpm-deb.md         ← interactive RPM/DEB on a single host
-│   ├── 02-csw-generated-script.md   ← the most common enterprise method
-│   ├── 03-package-repo-satellite.md ← internal Yum/APT repo, Satellite, Spacewalk
-│   ├── 04-ansible.md                ← Ansible / Tower / AWX
-│   ├── 05-puppet.md                 ← Puppet manifest
-│   ├── 06-chef.md                   ← Chef recipe
-│   ├── 07-saltstack.md              ← Salt state
-│   ├── 08-verification.md           ← health checks, log locations, common gotchas
-│   └── examples/                    ← runnable Ansible / Puppet / Chef / Salt files
-├── windows/                   ← all Windows installation methods
-│   ├── README.md
-│   ├── 01-msi-silent-install.md     ← msiexec patterns
-│   ├── 02-csw-generated-powershell.md ← prebaked PowerShell installer
-│   ├── 03-sccm-deployment.md        ← Microsoft Configuration Manager
-│   ├── 04-intune-deployment.md      ← Intune Win32 app
-│   ├── 05-group-policy.md           ← GPO startup script fallback
-│   ├── 06-verification.md
-│   └── examples/                    ← Intune detection scripts, GPO templates
-├── cloud/                     ← cloud-VM installation patterns
-│   ├── README.md
-│   ├── 01-aws-userdata.md           ← user_data + IMDSv2 + S3-sourced packages
-│   ├── 02-azure-customdata.md       ← cloud-init / custom_data
-│   ├── 03-gcp-startup-script.md     ← GCE startup metadata
-│   ├── 04-terraform.md              ← Terraform examples for AWS / Azure / GCP
-│   ├── 05-golden-ami.md             ← Packer pattern (AWS)
-│   ├── 06-azure-vm-image.md         ← Azure Compute Gallery
-│   └── examples/                    ← Terraform .tf, Packer .pkr.hcl, cloud-init
-├── kubernetes/                ← container-orchestrated installations
-│   ├── README.md
-│   ├── 01-daemonset-helm.md         ← official CSW Helm chart pattern
-│   ├── 02-daemonset-yaml.md         ← raw manifest for air-gapped / no-Helm shops
-│   ├── 03-eks-aks-gke.md            ← managed-K8s service-specific notes
-│   ├── 04-openshift.md              ← Security Context Constraints (SCC) notes
-│   ├── 05-verification.md
-│   └── examples/                    ← Helm values, raw DaemonSet manifest
-├── agentless/                 ← cloud connectors (no host agent on the workload)
-│   ├── README.md                    ← when (and when not) to use connectors
-│   ├── 01-aws-cloud-connector.md
-│   ├── 02-azure-cloud-connector.md
-│   ├── 03-gcp-cloud-connector.md
-│   ├── 04-vcenter-connector.md
-│   └── 05-comparison-matrix.md      ← agent vs. connector trade-offs
-└── operations/                ← lifecycle + day-2 operations
-    ├── README.md
-    ├── 01-network-prereq.md         ← exhaustive port / cert / NTP reference
-    ├── 02-proxy.md                  ← forward / authenticating / decrypting proxy
-    ├── 03-air-gapped.md             ← internet-restricted / air-gapped patterns
-    ├── 04-upgrade.md
-    ├── 05-uninstall.md              ← uninstall + decommission from CSW
-    ├── 06-troubleshooting.md        ← symptom-first flowcharts
-    ├── 07-enforcement-rollout.md    ← phased Monitor → Simulate → Enforce
-    └── 08-evidence-audit.md         ← evidence buckets for compliance audit
-```
+- [`README.md`](./README.md) — you are here (overview + decision matrix)
+- [`INDEX.md`](./INDEX.md) — jump table by OS / by automation tool / by question
+- [`docs/`](./docs/) — background concepts (read first)
+  - [`00-official-references.md`](./docs/00-official-references.md) — CSW 4.0 official docs cross-reference (read first!)
+  - [`01-prerequisites.md`](./docs/01-prerequisites.md) — network, ports, certs, OS support, sizing
+  - [`02-sensor-types.md`](./docs/02-sensor-types.md) — Deep Visibility, Enforcement, UV, NVM, HW, Cloud
+  - [`03-decision-matrix.md`](./docs/03-decision-matrix.md) — which method for which environment
+  - [`04-rollout-strategy.md`](./docs/04-rollout-strategy.md) — Monitor → Simulate → Enforce
+  - [`05-anyconnect-ise-alternatives.md`](./docs/05-anyconnect-ise-alternatives.md) — when no CSW agent is needed (NVM / ISE)
+- [`linux/`](./linux/) — all Linux installation methods
+  - [`README.md`](./linux/README.md)
+  - [`01-manual-rpm-deb.md`](./linux/01-manual-rpm-deb.md) — interactive RPM/DEB on a single host
+  - [`02-csw-generated-script.md`](./linux/02-csw-generated-script.md) — the most common enterprise method
+  - [`03-package-repo-satellite.md`](./linux/03-package-repo-satellite.md) — internal Yum/APT repo, Satellite, Spacewalk
+  - [`04-ansible.md`](./linux/04-ansible.md) — Ansible / Tower / AWX
+  - [`05-puppet.md`](./linux/05-puppet.md) — Puppet manifest
+  - [`06-chef.md`](./linux/06-chef.md) — Chef recipe
+  - [`07-saltstack.md`](./linux/07-saltstack.md) — Salt state
+  - [`08-verification.md`](./linux/08-verification.md) — health checks, log locations, common gotchas
+  - [`examples/`](./linux/examples/) — runnable Ansible / Puppet / Chef / Salt files
+- [`windows/`](./windows/) — all Windows installation methods
+  - [`README.md`](./windows/README.md)
+  - [`01-msi-silent-install.md`](./windows/01-msi-silent-install.md) — msiexec patterns
+  - [`02-csw-generated-powershell.md`](./windows/02-csw-generated-powershell.md) — prebaked PowerShell installer
+  - [`03-sccm-deployment.md`](./windows/03-sccm-deployment.md) — Microsoft Configuration Manager
+  - [`04-intune-deployment.md`](./windows/04-intune-deployment.md) — Intune Win32 app
+  - [`05-group-policy.md`](./windows/05-group-policy.md) — GPO startup script fallback
+  - [`06-verification.md`](./windows/06-verification.md)
+  - [`examples/`](./windows/examples/) — Intune detection scripts, GPO templates
+- [`cloud/`](./cloud/) — cloud-VM installation patterns
+  - [`README.md`](./cloud/README.md)
+  - [`01-aws-userdata.md`](./cloud/01-aws-userdata.md) — user_data + IMDSv2 + S3-sourced packages
+  - [`02-azure-customdata.md`](./cloud/02-azure-customdata.md) — cloud-init / custom_data
+  - [`03-gcp-startup-script.md`](./cloud/03-gcp-startup-script.md) — GCE startup metadata
+  - [`04-terraform.md`](./cloud/04-terraform.md) — Terraform examples for AWS / Azure / GCP
+  - [`05-golden-ami.md`](./cloud/05-golden-ami.md) — Packer pattern (AWS)
+  - [`06-azure-vm-image.md`](./cloud/06-azure-vm-image.md) — Azure Compute Gallery
+  - [`examples/`](./cloud/examples/) — Terraform .tf, Packer .pkr.hcl, cloud-init
+- [`kubernetes/`](./kubernetes/) — container-orchestrated installations
+  - [`README.md`](./kubernetes/README.md)
+  - [`01-daemonset-helm.md`](./kubernetes/01-daemonset-helm.md) — official CSW Helm chart pattern
+  - [`02-daemonset-yaml.md`](./kubernetes/02-daemonset-yaml.md) — raw manifest for air-gapped / no-Helm shops
+  - [`03-eks-aks-gke.md`](./kubernetes/03-eks-aks-gke.md) — managed-K8s service-specific notes
+  - [`04-openshift.md`](./kubernetes/04-openshift.md) — Security Context Constraints (SCC) notes
+  - [`05-verification.md`](./kubernetes/05-verification.md)
+  - `examples/` — Helm values, raw DaemonSet manifest
+- [`agentless/`](./agentless/) — cloud connectors (no host agent on the workload)
+  - [`README.md`](./agentless/README.md) — when (and when not) to use connectors
+  - [`01-aws-cloud-connector.md`](./agentless/01-aws-cloud-connector.md)
+  - [`02-azure-cloud-connector.md`](./agentless/02-azure-cloud-connector.md)
+  - [`03-gcp-cloud-connector.md`](./agentless/03-gcp-cloud-connector.md)
+  - [`04-vcenter-connector.md`](./agentless/04-vcenter-connector.md)
+  - [`05-comparison-matrix.md`](./agentless/05-comparison-matrix.md) — agent vs. connector trade-offs
+- [`operations/`](./operations/) — lifecycle + day-2 operations
+  - [`README.md`](./operations/README.md)
+  - [`01-network-prereq.md`](./operations/01-network-prereq.md) — exhaustive port / cert / NTP reference
+  - [`02-proxy.md`](./operations/02-proxy.md) — forward / authenticating / decrypting proxy
+  - [`03-air-gapped.md`](./operations/03-air-gapped.md) — internet-restricted / air-gapped patterns
+  - [`04-upgrade.md`](./operations/04-upgrade.md)
+  - [`05-uninstall.md`](./operations/05-uninstall.md) — uninstall + decommission from CSW
+  - [`06-troubleshooting.md`](./operations/06-troubleshooting.md) — symptom-first flowcharts
+  - [`07-enforcement-rollout.md`](./operations/07-enforcement-rollout.md) — phased Monitor → Simulate → Enforce
+  - [`08-evidence-audit.md`](./operations/08-evidence-audit.md) — evidence buckets for compliance audit
 
 ---
 

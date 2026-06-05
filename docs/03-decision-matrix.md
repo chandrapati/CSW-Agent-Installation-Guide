@@ -167,6 +167,7 @@ Detail in [`../agentless/`](../agentless/).
 | SCCM | Windows fleets under Configuration Manager | Medium (package + deployment + compliance baseline) | Low | Yes | Standard enterprise Windows pattern |
 | Intune | Windows fleets under Microsoft Endpoint Manager (cloud) | Medium (Win32 app + detection script) | Low | No (Intune is cloud-managed) | Standard for cloud-managed Windows |
 | GPO startup script | Windows fleets without SCCM / Intune | Low (script + GPO) | Medium (GPO is coarse) | Yes | Fallback only |
+| Tanium Deploy / Provision | Linux or Windows fleets under Tanium | Medium (package + `user.cfg` pre-stage) | Low | Yes | **Pre-stage `user.cfg` with activation key before install** — see [`../tanium/README.md`](../tanium/README.md) |
 | Cloud `user_data` / `custom_data` / startup script | New cloud VMs | Low | Low | Limited (cloud-provider native) | Works with any IaC tool |
 | Terraform module | New cloud VMs in IaC pipelines | Medium (write the module) | Low | Yes (with private package source) | Embeds in `user_data` / `custom_data` |
 | Golden AMI / Compute Gallery image | Cloud at scale | High (image-bake pipeline) | Low (ship new image; rollouts replace) | Yes (private registry) | Best pattern at scale; zero-touch on new VMs |

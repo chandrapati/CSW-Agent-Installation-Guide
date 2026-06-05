@@ -1,0 +1,14 @@
+# Cisco Secure Workload — user configuration file
+# Copy to user.cfg in the SAME directory as the installer script or MSI
+# BEFORE running any install command (Tanium, SCCM, Ansible, etc.).
+#
+# Obtain ACTIVATION_KEY from:
+#   CSW UI → Manage → Agents → Install Agent
+#   (same workflow where you download the installer bundle)
+#
+# Do not commit this file with a real key to Git.
+
+ACTIVATION_KEY=PASTE-ACTIVATION-KEY-FROM-CSW-UI
+
+# Optional — only if the workload reaches the cluster via forward proxy:
+# HTTPS_PROXY=http://proxy.example.com:8080

@@ -36,9 +36,17 @@ read:
 ```
 \\sccm-content.example.com\sources$\Apps\CiscoSecureWorkload\3.x.y.z\
     └── TetrationAgentInstaller-3.x.y.z-x64.msi
+    └── user.cfg                          ← ACTIVATION_KEY pre-staged (mandatory for SaaS / non-default tenant)
+    └── ca.cert, site.cfg, sensor_config, sensor_type, enforcer.cfg (if enforcement)
     └── (optional) install_logger.ps1   ← for verbose log capture
-    └── site files from the Cisco package (for manual image installs)
 ```
+
+> **Automated deployments.** Retrieve the activation key from the
+> CSW UI and write **`user.cfg`** in this folder **before** SCCM
+> distributes content or runs `msiexec`. The MSI expects site files
+> (including `user.cfg`) in the same directory. See
+> [`../tanium/README.md`](../tanium/README.md) for the same pattern
+> on Tanium and a reusable checklist.
 
 **Why a versioned subfolder.** When you publish the next CSW
 release, place the new MSI under `3.x.y+1.z\` and create a *new*

@@ -37,10 +37,20 @@ Restated from the CSW 4.0 User Guide (On-Prem and SaaS):
   activity at runtime. **Configure exclusions** in those tools
   *before* installing — the User Guide lists per-product
   guidance (Defender, CrowdStrike, Symantec, etc.).
-- **Activation key + optional HTTPS proxy.** Agents register
-  using an activation key generated in the CSW UI; if the
-  workload egresses through a proxy, configure the proxy in the
-  user configuration file before install.
+- **Activation key + optional HTTPS proxy (`user.cfg`).** Agents
+  register using an activation key generated in the CSW UI. For
+  **automated deployments** (Tanium, SCCM, Ansible, Intune,
+  cloud-init with a local installer bundle, etc.), you must
+  **retrieve the activation key and pre-stage it in `user.cfg`**
+  in the **same directory as the installer script or MSI** —
+  **before** the orchestrator runs any install command. If the
+  workload egresses through a proxy, add `HTTPS_PROXY` to
+  `user.cfg` as well. See
+  [`../tanium/README.md`](../tanium/README.md) for a full
+  Tanium walkthrough and
+  [`../tanium/examples/user.cfg.example`](../tanium/examples/user.cfg.example)
+  for the file format. Windows manual installs document the same
+  file in [`../windows/01-msi-silent-install.md`](../windows/01-msi-silent-install.md).
 - **Firewall + TLS.** If a firewall sits between the workload and
   the cluster (or the host firewall is enabled), open the
   required policy. CSW agents use TLS to reach the cluster, and

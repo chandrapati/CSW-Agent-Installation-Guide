@@ -173,9 +173,15 @@ once before any install attempt.
   EDR / AV / HIDS that monitors the host so it does not block
   the agent install or the agent's running activity. Cisco
   publishes per-product guidance in the User Guide.
-- **Network.** Agents register to the cluster using an
-  activation key, and may need an HTTPS proxy. Configure these
-  in the user configuration file before installation.
+- **Network / activation (`user.cfg`).** Agents register to the
+  cluster using an activation key, and may need an HTTPS proxy.
+  Configure these in **`user.cfg`** (the user configuration file)
+  **before installation** — especially for automated rollouts
+  where your deployment tool (Tanium, SCCM, Ansible, etc.)
+  distributes the installer bundle separately from the CSW UI.
+  Minimum content: `ACTIVATION_KEY=<key from Manage → Agents →
+  Install Agent>`. Optional: `HTTPS_PROXY=http://proxy:8080`.
+  See [`../tanium/README.md`](../tanium/README.md).
 - **Firewall + TLS.** If a firewall is between the workload and
   the cluster, or the host firewall is enabled, configure
   appropriate policies. CSW agents use TLS to reach the

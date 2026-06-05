@@ -43,6 +43,9 @@ for fully automated, idempotent rollout and upgrade.
 ## Prerequisites
 
 - All items from [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md)
+  — including **`user.cfg` with `ACTIVATION_KEY` pre-staged before
+  install** when distributing the Agent Image Installer bundle via
+  automation ([`../tanium/README.md`](../tanium/README.md))
 - Ansible 2.12+ (any current version works)
 - An Ansible inventory of target hosts with SSH access and
   `become` privilege

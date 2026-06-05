@@ -30,6 +30,7 @@
 | **SCCM (Microsoft Configuration Manager)** | n/a | [windows/03-sccm-deployment.md](./windows/03-sccm-deployment.md) | Standard enterprise pattern for Windows |
 | **Intune** | n/a | [windows/04-intune-deployment.md](./windows/04-intune-deployment.md) | Cloud-managed Windows fleet |
 | **Group Policy (GPO)** | n/a | [windows/05-group-policy.md](./windows/05-group-policy.md) | Fallback when SCCM / Intune are not available |
+| **Tanium** | [tanium/README.md](./tanium/README.md) | [tanium/README.md](./tanium/README.md) | Pre-stage `user.cfg` with activation key **before** install command |
 | **Terraform** | [cloud/04-terraform.md](./cloud/04-terraform.md) | [cloud/04-terraform.md](./cloud/04-terraform.md) | Embed agent in `user_data` / `custom_data` |
 | **Packer** | [cloud/05-golden-ami.md](./cloud/05-golden-ami.md) | [cloud/05-golden-ami.md](./cloud/05-golden-ami.md) | Bake agent into the base image |
 | **Helm (K8s)** | [kubernetes/01-daemonset-helm.md](./kubernetes/01-daemonset-helm.md) | n/a | Community / internally-maintained pattern. **Cisco's documented K8s install method is the Agent Script Installer** (it provisions namespace, RBAC, and DaemonSet for you) — see [kubernetes/02-daemonset-yaml.md](./kubernetes/02-daemonset-yaml.md) and the [Install Kubernetes or OpenShift Agents](https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-on-prem-v40/deploy-software-agents.html) section of the CSW 4.0 User Guide. |
@@ -43,6 +44,7 @@
 |---|---|
 | **Single host, lab / testing** | [Manual RPM/DEB](./linux/01-manual-rpm-deb.md) or [CSW shell script](./linux/02-csw-generated-script.md) |
 | **Linux fleet, no automation tool yet** | [CSW-generated shell script](./linux/02-csw-generated-script.md) pushed via your existing remote-execution channel |
+| **Linux or Windows fleet under Tanium** | [Tanium Deploy package + pre-staged `user.cfg`](./tanium/README.md) |
 | **Linux fleet, Ansible already in use** | [Ansible playbook](./linux/04-ansible.md) — most common enterprise pattern |
 | **Linux fleet, Puppet / Chef / Salt already in use** | Native module / cookbook / state — see linux/05–07 |
 | **Air-gapped Linux** | [Internal Yum/APT repo via Satellite / Spacewalk / Pulp](./linux/03-package-repo-satellite.md) |
@@ -76,6 +78,7 @@
 | *"How do I deploy without breaking production traffic?"* | [operations/07-enforcement-rollout.md](./operations/07-enforcement-rollout.md) |
 | *"How do I know if the install actually worked?"* | [linux/08-verification.md](./linux/08-verification.md) · [windows/06-verification.md](./windows/06-verification.md) |
 | *"My agent is installed but not registering with the cluster — why?"* | [operations/06-troubleshooting.md](./operations/06-troubleshooting.md) |
+| *"How do I deploy via Tanium?"* | [tanium/README.md](./tanium/README.md) — includes `user.cfg` + activation key pre-staging |
 | *"How do I configure the agent behind a corporate proxy?"* | [operations/02-proxy.md](./operations/02-proxy.md) |
 | *"How do I deploy in an air-gapped environment?"* | [operations/03-air-gapped.md](./operations/03-air-gapped.md) |
 | *"How do I upgrade the agent to a new version?"* | [operations/04-upgrade.md](./operations/04-upgrade.md) |

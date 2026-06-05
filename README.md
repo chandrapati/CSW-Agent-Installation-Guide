@@ -105,6 +105,9 @@ telemetry into a working policy workspace"* without surprises.
   - [`05-group-policy.md`](./windows/05-group-policy.md) — GPO startup script fallback
   - [`06-verification.md`](./windows/06-verification.md)
   - [`examples/`](./windows/examples/) — Intune detection scripts, GPO templates
+- [`tanium/`](./tanium/) — Tanium Deploy / Provision (Linux + Windows)
+  - [`README.md`](./tanium/README.md) — package layout, **`user.cfg` pre-staging**, rollout
+  - [`examples/`](./tanium/examples/) — staging scripts + install wrappers
 - [`cloud/`](./cloud/) — cloud-VM installation patterns
   - [`README.md`](./cloud/README.md)
   - [`01-aws-userdata.md`](./cloud/01-aws-userdata.md) — user_data + IMDSv2 + S3-sourced packages
@@ -228,6 +231,7 @@ Detail in [`docs/02-sensor-types.md`](./docs/02-sensor-types.md).
 |---|---|---|
 | One Linux host, one-off | Manual RPM/DEB | First lab install, troubleshooting |
 | Many Linux hosts, no automation tool | CSW-generated shell script | Lab sweeps, small fleets |
+| Linux or Windows fleet under Tanium | Tanium Deploy + pre-staged `user.cfg` | [`tanium/README.md`](./tanium/README.md) |
 | Linux fleet under Ansible | Ansible playbook | Standard enterprise pattern |
 | Linux fleet under Puppet / Chef / Salt | Native module / cookbook / state | When that's already your config-mgmt platform |
 | Air-gapped Linux | Internal Yum/APT repo (Satellite / Spacewalk / Pulp) | Regulated environments without internet |

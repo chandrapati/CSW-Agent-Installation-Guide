@@ -277,15 +277,18 @@ activation key. Restrict `ami_users` / sharing accordingly.
 
 ---
 
-## Common gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| Packer build registers the agent against the cluster | `csw-agent` started during build | Mask the service before the build provisioner starts (see Pattern X above); use Pattern X instead of Y |
-| Image build succeeds but instances launched from it never start `csw-agent` | `csw-first-boot.service` failed silently | Check `agent logs` on a launched instance; usually a missing tag or SSM permission |
-| AMI reaches consumer accounts but `aws ssm get-parameter` fails | The launching account can't read the activation key parameter | Move the parameter to the launching account's SSM (or use cross-account parameter access via Resource Access Manager) |
-| Sensor inventory shows the build instance as a registered host | Same as gotcha 1 | Mask `csw-agent` during build; deregister the build instance from CSW UI |
-| Image build fails on `kernel-headers` mismatch | Build instance kernel doesn't match the headers package | Pin the kernel during the build (`dnf install kernel-X.Y.Z-N`); or run `dnf upgrade -y && reboot` before installing the agent |
+| Packer build registers agent against cluster | `csw-agent` started during build | Mask service before build; use `--golden-image` / first-boot activation |
+| Launched instances never start `csw-agent` | First-boot unit failed silently | Check agent logs on instance; verify SSM/IAM for activation key fetch |
+| AMI consumer can't read activation key | Cross-account SSM permission | Use RAM or copy parameter to launching account |
+| Build instance appears in CSW UI | Same as first row | Deregister build instance; mask service during bake |
+| Build fails on kernel-headers | Kernel/headers mismatch | Pin kernel or reboot before agent install step |
+| *Not Active* on clones | `user.cfg` missing on first-boot | First-boot script must write `user.cfg` before starting agent |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
 
 ---
 

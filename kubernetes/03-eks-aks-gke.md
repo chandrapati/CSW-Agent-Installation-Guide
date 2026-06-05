@@ -64,6 +64,21 @@ do not describe it as supported by this guide.
 
 ---
 
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| DaemonSet not scheduling (EKS/AKS/GKE) | Managed policy blocks privileged pods | Validate PSA/AKS policy; use Cisco-generated manifest tolerations |
+| Image pull failures on all nodes | No egress to CSW cluster :443 | Open node egress or mirror registry |
+| Windows node pool pods fail | Windows agent prerequisites not met | Validate Windows Server version, `containerd`, host-process base image per Cisco matrix |
+| Flows missing only on Autopilot/GKE sandbox | Privileged host access not permitted | Confirm platform allows hostNetwork DaemonSet; engage TAC if not |
+| Pods restart every node upgrade | Expected during managed upgrades | Monitor; don't treat as install failure |
+| Wrong cluster registration | Stale Secret from old installer run | Re-run Agent Script Installer; apply new Secret |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) · [`05-verification.md`](./05-verification.md)
+
+---
+
 ## See also
 
 - [`01-daemonset-helm.md`](./01-daemonset-helm.md)

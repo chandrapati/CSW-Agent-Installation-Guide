@@ -199,18 +199,19 @@ and continue to report correctly through upgrades.
 
 ---
 
-## Common gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| App stays "Pending" forever in Intune monitoring | Device hasn't synced with Intune since assignment | Force sync: Settings → Accounts → Access work or school → Sync; or Intune *Sync* action on the device record |
-| Install completes but detection says "not detected" | Service not in Running state at detection time (race condition) | Detection script already returns 1 if service is missing or not running; Intune retries on next sync. If persistent, increase install grace period |
-| Compliance setting shows non-compliant immediately after install | Compliance evaluation runs before Win32 app installation completes | Compliance evaluation happens on its own schedule; expect resolution within an hour |
-| MSI installs but agent never registers | Activation key issue or network egress | Verify outbound 443 to cluster from the device; verify activation key in CSW UI; reinstall via Intune *Reinstall* action |
-| "0x87D300C9" — required app installation failed | Intune-specific error code; root cause varies | Pull the IME log: `%ProgramData%\Microsoft\IntuneManagementExtension\Logs\IntuneManagementExtension.log` |
+| App stays "Pending" forever | Device hasn't synced with Intune | Force device sync; use Intune *Sync* action on device record |
+| Install completes but detection says "not detected" | Service not Running at detection time | Detection script retries on next sync; confirm `CswAgent` running |
+| Compliance non-compliant immediately after install | Compliance ran before Win32 install finished | Wait for next evaluation cycle (~1 h) |
+| MSI installs but agent never registers | Missing `user.cfg` / wrong activation key | Include `user.cfg` in `.intunewin` payload; pre-stage key before install |
+| `0x87D300C9` — required app installation failed | IME error; root cause varies | Read `%ProgramData%\Microsoft\IntuneManagementExtension\Logs\IntuneManagementExtension.log` |
+| `1603` / `1722` in install log | EDR blocked MSI custom action | Add Defender exclusions; verify full site file set in package |
+| TLS errors after install | Wrong `ca.cert` or missing site files | Re-package with complete Cisco ZIP extract |
 
-Full troubleshooting in
-[`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md).
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) · [`06-verification.md`](./06-verification.md)
 
 ---
 

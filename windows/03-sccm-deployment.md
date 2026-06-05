@@ -214,18 +214,19 @@ valuable.
 
 ---
 
-## Common gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
 | Application reports "Past due — will be installed" but never installs | Client check-in not happening | Run `ccmexec` triggers manually; confirm SCCM client is healthy on the target |
-| Install reports success but service isn't running | MSI installed but `CswAgent` service failed to start | Check `%TEMP%\csw-agent-install.log` per Step 2; check Application event log; check package site files / activation key |
-| Compliance Baseline reports `NotInstalled` after install reports success | Detection method mismatch (often after MSI ProductCode change) | Update the Application's detection method to match the new ProductCode |
-| Deployment fails with `0x87D00324` (application not detected) | Detection method too strict (e.g., looking for old version) | Re-run *Create Application* wizard with the new MSI to refresh the auto-detection |
-| Defender flags the kernel filter driver | Driver not in default Defender allow-list | Pre-stage Cisco's published exception per your Defender / EDR product |
+| Install reports success but service isn't running | MSI installed but `CswAgent` failed to start | Check `%TEMP%\csw-agent-install.log`; Application event log; EDR exclusions |
+| Install succeeds; CSW UI *Not Active* | `user.cfg` missing from content source or wrong key | Pre-stage `user.cfg` with `ACTIVATION_KEY` alongside MSI **before** deployment — see [`../tanium/README.md`](../tanium/README.md) |
+| Compliance Baseline reports `NotInstalled` after success | Detection method mismatch (ProductCode change) | Re-create Application detection from new MSI |
+| Deployment fails with `0x87D00324` | Detection method too strict | Refresh auto-detection from current MSI |
+| Defender flags kernel filter driver | Driver not in allow-list | Pre-stage Cisco exclusions per prerequisites doc |
+| Site file / TLS errors in MSI log | MSI deployed without `ca.cert`, `site.cfg` | Ship full Cisco ZIP contents in SCCM source folder |
 
-Full troubleshooting in
-[`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md).
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) · [`06-verification.md`](./06-verification.md)
 
 ---
 

@@ -222,18 +222,18 @@ When CSW publishes a new agent release:
 
 ---
 
-## Common gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| `user_data` runs but agent never installs | `cloud-init` ran before network was up; package fetch failed silently | Add `set -euxo pipefail` at the top so failures fail loudly; check `/var/log/cloud-init-output.log` |
-| `aws s3 cp` fails with `403` | Instance role missing `CSWAgentPull` policy | Attach the policy; instance metadata caches IAM creds for 6 h, may need fresh launch |
-| Activation key visible in `user_data` console output | Key was hardcoded in the script | Move to SSM Parameter Store with `--with-decryption`; never hardcode in `user_data` |
-| Agent installs but registers under wrong scope | `sensor.conf` script populated the wrong `SCOPE` value | Confirm the SSM parameter / template variable for the launch template |
-| Auto-scaling event lag (instance takes 90+ seconds to be "ready") | First-boot install takes time | Move to Golden AMI to remove the install from boot |
+| `user_data` runs but agent never installs | Network not up; silent failure | Add `set -euxo pipefail`; check `/var/log/cloud-init-output.log` |
+| `aws s3 cp` fails with `403` | Instance role missing S3 read | Attach IAM policy; new instances may need fresh launch |
+| Activation key visible in console | Key hardcoded in `user_data` | Use SSM Parameter Store; pre-stage `user.cfg` from secret at boot |
+| Agent installs but wrong scope | Wrong SSM parameter / template var | Confirm `SCOPE` and `ACTIVATION_KEY` parameters per environment |
+| *Not Active* after boot install | `user.cfg` not written before installer | Write `user.cfg` as first cloud-init step before `install_sensor.sh` |
+| ASG instance slow to become healthy | First-boot install latency | Move to Golden AMI ([05-golden-ami.md](./05-golden-ami.md)) |
 
-Full troubleshooting in
-[`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md).
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
 
 ---
 

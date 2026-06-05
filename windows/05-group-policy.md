@@ -209,15 +209,18 @@ plan for it now or adopt SCCM / Intune.
 
 ---
 
-## Common gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| Startup script doesn't run | GPO not applying to the OU | `gpresult /h gpresult.html` on a target; confirm the GPO is in the *Applied* list |
-| Script runs but MSI install fails | Network share unreachable from `LocalSystem` context | Confirm the share's permissions include `Domain Computers` (machine accounts), not just user groups |
-| Startup script runs every boot, attempts reinstall | Idempotency check failed | Confirm the script's service-name check matches CSW 4.0: `CswAgent`. If you maintain older Tetration-era agents, adapt the script using that release's Cisco guide |
-| Some hosts succeed, others timeout | Slow boot causing GPO timeout | Increase *Specify maximum wait time for Group Policy scripts*; or convert to a scheduled task that runs at boot with a longer grace period |
-| GPO auditing shows the script ran but no install log | `LocalSystem` lacks write access to the temp path | Verify `C:\Windows\Temp` is writable; or change `$logPath` to a different location |
+| Startup script doesn't run | GPO not applying to the OU | `gpresult /h gpresult.html`; confirm GPO in *Applied* list |
+| Script runs but MSI install fails | UNC share unreachable from `LocalSystem` | Grant `Domain Computers` read on share; test from elevated PS as SYSTEM |
+| Install succeeds; CSW *Not Active* | `user.cfg` not copied to MSI folder before `msiexec` | Pre-stage `user.cfg` on share with MSI + site files |
+| Startup script runs every boot | Idempotency check failed | Confirm script checks `CswAgent` service name (CSW 4.0) |
+| Some hosts succeed, others timeout | GPO script timeout on slow boot | Increase max wait time for GPO scripts; or use scheduled task |
+| No install log | `LocalSystem` can't write log path | Use `C:\Windows\Temp\csw-agent-install.log` |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
 
 ---
 

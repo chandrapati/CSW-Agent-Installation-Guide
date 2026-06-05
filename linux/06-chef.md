@@ -367,6 +367,20 @@ end
 
 ---
 
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Cookbook compile error on `activation_key` | Missing node attribute / data bag | Set `node['csw_sensor']['activation_key']` from Vault; never hardcode in recipe |
+| `chef-client` succeeds but no registration | Wrong scope or key in `sensor.conf` template | Confirm data bag values match CSW UI; pre-stage `user.cfg` if using image installer |
+| Package install fails mid-converge | Wrong `.rpm`/`.deb` for platform | Use `platform`/`platform_version` in package URL logic |
+| Service enabled but not running | Kernel module or SELinux block | Check `journalctl -u csw-agent`; run ChefSpec + manual verify on one node |
+| Idempotency noise every run | `remote_file` checksum changes | Pin package version; use internal repo with stable URLs |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
+
+---
+
 ## When this is the right method
 
 - **Fleet already managed by Chef.** Drop the cookbook in; works

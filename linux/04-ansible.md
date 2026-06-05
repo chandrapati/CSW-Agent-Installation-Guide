@@ -427,14 +427,21 @@ ansible-playbook --check --diff -i inventory/csw-targets.ini \
 
 ---
 
-## Common gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| Play hangs at "Run installer" | Script can't reach cluster (network / proxy) | Set `HTTPS_PROXY` in the play environment, or use Pattern B / C with proxy in `sensor.conf` |
-| Repo install fails with "no package found" | Repo definition correct but metadata not refreshed on the host | Add `update_cache: true` (apt) or `dnf clean all` task before install |
-| Sensor installs but not registered | Activation config / key issue | Check `/etc/tetration/sensor.conf`; verify the key in CSW UI; rerun with `--tags activate` |
-| Some hosts succeed, some fail with kernel error | Mixed kernel versions in fleet | Add `pre_tasks` that confirm `kernel-headers` matches `uname -r`; or move outliers to UV |
+| Play hangs at "Run installer" | Script can't reach cluster (network / proxy) | Set `HTTPS_PROXY` in play env; use Pattern B/C with proxy in config; pre-stage `user.cfg` |
+| `Missing user.cfg` / activation failure on Pattern B | Image-installer bundle deployed without `user.cfg` | Pre-stage `ACTIVATION_KEY` in `user.cfg` before package install — see [`../tanium/README.md`](../tanium/README.md) |
+| Repo install fails with "no package found" | Repo metadata stale on host | Add `update_cache: true` (apt) or `dnf clean all` before install |
+| Sensor installs but not registered | Activation config / key issue | Verify key in CSW UI; for Pattern A regenerate installer; for Pattern B confirm `user.cfg` |
+| Some hosts succeed, some fail with kernel error | Mixed kernel versions in fleet | Add `pre_tasks` for `kernel-devel-$(uname -r)`; move outliers to Universal Visibility |
+| Ansible reports changed every run | Installer not idempotent on your release | Add `creates:` guard or use `--check` to confirm; prefer Pattern C for steady state |
+| `permission denied` on copy tasks | `become` not enabled | Ensure `become: true` and sudo on targets |
+
+Collect on failed hosts: `journalctl -u csw-agent -n 100`, `/var/log/tetration/`.
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
 
 ---
 

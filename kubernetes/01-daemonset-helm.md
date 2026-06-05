@@ -212,18 +212,23 @@ PR if you tag clusters by environment.
 
 ---
 
-## Common gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| `Pending` pods after `helm install` | PSA / PSP / SCC rejecting privileged pods | Confirm namespace label; check `kubectl describe pod` |
-| `ImagePullBackOff` | Cluster nodes can't pull the image | Mirror to internal registry; add `imagePullSecrets:` |
-| Pods running but no flows in CSW UI | Missing `hostNetwork`, `hostPID`, or volume mounts | Compare values to chart defaults; some charts have a `metricsOnly: true` switch that disables host-namespace mounts |
-| Sensor pod CPU spike that never subsides | Per-node flow rate exceeds default profile | Adjust agent profile in CSW UI for that node group |
-| DaemonSet not scheduling on tainted nodes (control-plane, GPU pools) | Missing tolerations | Add `tolerations:` matching the taints to the values file |
-| Activation key in `values.yaml` checked into Git | Secret leak risk | Use Secret + chart `configFromSecret:` (or sealed-secrets) |
+| `Pending` pods after `helm install` | PSA / PSP / SCC rejecting privileged pods | Check `kubectl describe pod`; fix namespace labels |
+| `ImagePullBackOff` | Nodes can't pull agent image from cluster | Mirror to internal registry; add `imagePullSecrets` |
+| Pods running but no flows in CSW UI | Missing hostNetwork/hostPID mounts | Compare values to Cisco-generated DaemonSet |
+| Sensor pod CPU spike | High per-node flow rate | Adjust agent profile in CSW UI |
+| DaemonSet not on tainted nodes | Missing tolerations | Add tolerations matching node taints |
+| Activation key in Git | Secret leak | Use Kubernetes Secret from installer output |
+| Pods CrashLoop after upgrade | Image tag drift from cluster | Re-run Cisco Agent Script Installer; align image tag |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) · [`05-verification.md`](./05-verification.md)
 
 ---
+
+## See also
 
 ## See also
 

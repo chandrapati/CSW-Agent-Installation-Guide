@@ -196,18 +196,18 @@ resource "azurerm_linux_virtual_machine_scale_set" "web" {
 
 ---
 
-## Common gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| `cloud-init` runs but agent install fails at storage pull | Managed identity not yet available; ran too early | Add `sleep 30` before the first metadata call (the example above already does this) |
-| Storage pull returns 403 | Managed identity missing Storage Blob Data Reader on the container | Re-run `az role assignment create`; new role assignments take 5+ minutes to propagate |
-| Key Vault access denied | Managed identity missing `get` on Key Vault secrets | Either RBAC (`az role assignment create --role 'Key Vault Secrets User' ...`) or access policy (`az keyvault set-policy --vault-name <kv> --object-id <id> --secret-permissions get`) |
-| `custom_data` shows up unparsed (literal cloud-init YAML) on Linux | base64 encoding mismatch | Confirm the value passed to Azure is base64; Terraform's `base64encode(...)` is your friend |
-| Windows `<powershell>` block doesn't run | `custom_data` not configured to execute | Use the [Custom Script Extension](https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-windows) for Windows; or use Azure Image Builder to bake the agent in |
+| `cloud-init` runs but install fails at storage pull | Managed identity not ready | Add delay before first metadata call (example already includes `sleep 30`) |
+| Storage pull returns 403 | MI missing Storage Blob Data Reader | Re-run role assignment; allow 5+ min propagation |
+| Key Vault access denied | MI missing secret get permission | Assign Key Vault Secrets User or access policy |
+| `custom_data` unparsed on Linux | base64 encoding mismatch | Use Terraform `base64encode(...)` |
+| Windows block doesn't run | `custom_data` not executed on Windows | Use Custom Script Extension or bake into image |
+| Agent *Not Active* | `user.cfg` not created before install in cloud-init | Add cloud-init write_files for `user.cfg` before install command |
 
-Full troubleshooting in
-[`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md).
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
 
 ---
 

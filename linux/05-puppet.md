@@ -327,6 +327,22 @@ end
 
 ---
 
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `puppet agent -t` fails on `Package[tet-sensor]` | Repo unreachable or wrong release | Confirm `yumrepo`/`apt::source` URL; run `puppet agent -t --debug` |
+| Catalog applies but agent *Not Active* | Hiera key wrong or `user.cfg` not staged | Verify `csw_sensor::activation_key` in Hiera; for image-installer pattern pre-stage `user.cfg` |
+| Service flaps on every run | Manifest fighting manual changes | Ensure only Puppet manages `/etc/tetration/` or install root; remove drift |
+| Some nodes skip install | `csw_rollout_wave` fact not set | Confirm ENC / fact injection for wave targeting |
+| SELinux denials after install | Custom install path without labels | Apply `semanage fcontext` + `restorecon` per [`01-manual-rpm-deb.md`](./01-manual-rpm-deb.md) |
+
+On failed nodes: `systemctl status csw-agent`, `journalctl -u csw-agent -n 100`.
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
+
+---
+
 ## When this is the right method
 
 - **Fleet already managed by Puppet.** Drop the module in;

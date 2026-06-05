@@ -170,15 +170,18 @@ Per environment:
 
 ---
 
-## Common gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| Startup script doesn't run | Disabled in instance template / not applied | Confirm `enable-oslogin` doesn't conflict; check `/var/log/syslog` for `google-startup-scripts` daemon entries |
-| `gs://` URL in `startup-script-url` returns 403 | VM SA missing `roles/storage.objectViewer` on the bucket | Add the binding; SA propagation takes a moment |
-| Secret Manager fetch returns 403 | VM SA missing `roles/secretmanager.secretAccessor` on the secret | Add the binding |
-| OAuth scope error during `curl` to Storage | VM launched with `--scopes=storage-ro` instead of `cloud-platform` | Use `cloud-platform` and rely on IAM bindings; or include `storage-ro` and `cloud-platform` |
-| Startup script runs every boot | This is by-design (key `startup-script` runs every boot) | Use the GCE one-time startup pattern: have the script `touch /var/lib/csw-installed` and exit early if that file exists |
+| Startup script doesn't run | Disabled in instance template | Check `/var/log/syslog` for `google-startup-scripts` entries |
+| `gs://` URL returns 403 | VM SA missing `storage.objectViewer` | Add IAM binding on bucket |
+| Secret Manager fetch 403 | VM SA missing `secretmanager.secretAccessor` | Add binding on secret |
+| OAuth scope error | Wrong instance scopes | Use `cloud-platform` scope + IAM |
+| Script runs every boot | GCE startup-script is not one-shot | Use idempotent wrapper below (`/var/lib/csw-installed`) |
+| Agent *Not Active* | `user.cfg` not written before install | Fetch key from Secret Manager into `user.cfg` as first script step |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
 
 ---
 

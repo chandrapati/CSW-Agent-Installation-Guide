@@ -69,14 +69,33 @@ HTTPS_PROXY=http://proxy.example.com:8080   # optional
 
 ## If something fails
 
+### All platforms (Tanium)
+
 | Symptom | First action |
 |---------|--------------|
-| *Not Active* / *unauthorized* | Verify `user.cfg` existed **before** install; regenerate key in CSW UI if rotated |
-| TLS / certificate errors | Re-ship full bundle; confirm `ca.cert` from **this** cluster |
-| Proxy errors | Add `HTTPS_PROXY` to `user.cfg`; redeploy |
-| MSI/script errors | Collect verbose log; check EDR block |
+| *Not Active* / *unauthorized* | Confirm `user.cfg` with valid `ACTIVATION_KEY` existed **before** install step ran |
+| Package step order wrong | Rebuild package: **(1) stage user.cfg → (2) deploy bundle → (3) install** |
+| Key in Tanium variable empty | Fix secret variable binding; pilot on one host before fleet |
 
-**Full troubleshooting:** [`operations/06-troubleshooting.md`](https://github.com/chandrapati/CSW-Agent-Installation-Guide/blob/main/operations/06-troubleshooting.md)
+### Linux
+
+| Symptom | First action |
+|---------|--------------|
+| Install fails immediately | `journalctl -u csw-agent -n 50`; confirm `user.cfg` at `/opt/tanium/csw/` |
+| TLS / cert errors | Re-ship `ca.cert` + full bundle from CSW UI |
+| Service won't start | Check kernel-devel match: `uname -r`; check SELinux AVC denials |
+| Network timeout | `nc -zv <cluster> 443`; open firewall per network prereq doc |
+
+### Windows
+
+| Symptom | First action |
+|---------|--------------|
+| MSI failure | Open `%TEMP%\csw-agent-tanium-install.log`; search `Return value 3` |
+| Service not running | `Get-Service CswAgent`; check Application event log |
+| EDR block (1722 / 1603) | Add Defender exclusions before redeploy |
+| Network | `Test-NetConnection <cluster> -Port 443`; add `HTTPS_PROXY` to `user.cfg` if proxied |
+
+**Full troubleshooting:** [`tanium/README.md`](https://github.com/chandrapati/CSW-Agent-Installation-Guide/blob/main/tanium/README.md#troubleshooting) · [`operations/06-troubleshooting.md`](https://github.com/chandrapati/CSW-Agent-Installation-Guide/blob/main/operations/06-troubleshooting.md)
 
 ---
 

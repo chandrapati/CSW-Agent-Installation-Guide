@@ -269,13 +269,107 @@ Optional **Tanium Sensor** for ongoing compliance:
 
 ## Troubleshooting
 
+Start with the symptom. Tanium-specific issues are listed first; then
+Linux- and Windows-specific diagnostics. Full cross-platform flowcharts:
+[`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md).
+
+### Tanium package / deployment issues (all OS)
+
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Install succeeds; agent *Not Active* in UI | `user.cfg` missing, empty, or wrong key | Re-run Step 1–2; confirm `ACTIVATION_KEY=` line in deploy directory **before** install |
-| `unauthorized` in agent logs | Key rotated or wrong tenant | Regenerate key in CSW UI; update Tanium variable; redeploy |
-| MSI / script can't find site files | Package missing `ca.cert`, `site.cfg`, etc. | Ship full Cisco bundle; don't upload MSI alone |
-| Tanium reports success but no service | EDR blocked driver / partial MSI | Check verbose MSI log / `journalctl -u csw-agent`; see [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) |
-| Proxy errors | `HTTPS_PROXY` not set in `user.cfg` | Add proxy line; see [`../operations/02-proxy.md`](../operations/02-proxy.md) |
+| Package step 1 succeeds, step 2 fails immediately | Install ran before `user.cfg` was staged | Re-order package steps: **stage key → deploy bundle → install** |
+| `CSW_ACTIVATION_KEY is not set` from staging script | Tanium variable not bound to package | Define secret package variable; map to `CSW_ACTIVATION_KEY` env var |
+| Tanium reports success but CSW UI shows *Not Active* | Empty/wrong `ACTIVATION_KEY` in `user.cfg` | Confirm `grep ACTIVATION_KEY` on endpoint **before** install; regenerate key in CSW UI |
+| Package succeeds on pilot, fails at scale | Mixed OS/arch in one package | Split Linux RPM vs DEB packages; separate Windows package |
+| Intermittent failures across fleet | Tanium client check-in / action timeout | Increase package timeout; roll in smaller computer groups |
+| Install files missing on endpoint | Package extract path differs from script `-InstallDir` | Use one fixed path (`/opt/tanium/csw/` or `C:\Program Files\Tanium\csw\`) in all steps |
+
+---
+
+### Linux — troubleshooting
+
+#### Collect evidence first
+
+```bash
+# Service state
+sudo systemctl status csw-agent
+sudo journalctl -u csw-agent -n 200 --no-pager
+
+# Agent logs (release-dependent path)
+sudo ls -la /var/log/tetration/ 2>/dev/null
+sudo tail -100 /var/log/tetration/*.log 2>/dev/null
+
+# Confirm user.cfg was present before install
+sudo cat /opt/tanium/csw/user.cfg   # adapt path
+grep -E '^ACTIVATION_KEY=' /opt/tanium/csw/user.cfg
+
+# Network egress (on-prem example — adapt IPs from CSW UI)
+nc -zv <CFG-SERVER> 443
+nc -zv <COLLECTOR> 5640
+
+# SELinux (if enforcing)
+sudo ausearch -m avc -ts recent | grep -iE 'csw|tet'
+```
+
+#### Linux symptom table
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Wrapper exits: `Missing user.cfg` | Staging step skipped or wrong directory | Run `stage-user-cfg.sh` first; confirm path matches install wrapper |
+| Wrapper exits: `ACTIVATION_KEY is empty` | Tanium variable blank or staging failed | Test staging script manually with exported key |
+| `download failed: cannot reach <cluster>` | Egress/firewall blocked | Open ports per [`../operations/01-network-prereq.md`](../operations/01-network-prereq.md); or pre-download package |
+| `tls handshake failed: x509: certificate signed by unknown authority` | Wrong/missing `ca.cert` | Re-ship full Cisco bundle from **this** cluster |
+| `tls handshake failed: certificate has expired or is not yet valid` | Clock skew | `chronyc tracking` / `timedatectl`; fix NTP |
+| `csw-agent` failed — kernel module compile | Missing `kernel-devel` for running kernel | `dnf install kernel-devel-$(uname -r)` (or apt equivalent); reinstall |
+| Service active but UI *Not Active* | Key rejected or proxy missing | Verify `user.cfg`; add `HTTPS_PROXY`; regenerate key |
+| `OS not supported` in installer log | Wrong `.rpm`/`.deb` for distro | Re-download from CSW UI for correct OS family |
+| Tanium install log shows permission denied | Script not run as root | Tanium package must use `sudo` / root context for install step |
+| Hangs at package signature validation | Time skew or corrupt download | Sync NTP; re-upload package to Tanium |
+
+Deeper verification: [`../linux/08-verification.md`](../linux/08-verification.md)
+
+---
+
+### Windows — troubleshooting
+
+#### Collect evidence first
+
+```powershell
+# Service state
+Get-Service -Name CswAgent
+Get-WinEvent -LogName Application -MaxEvents 100 |
+  Where-Object { $_.Message -like '*Csw*' -or $_.Message -like '*Secure Workload*' } |
+  Format-Table TimeCreated, LevelDisplayName, Message -AutoSize
+
+# MSI verbose log (path from tanium-windows-install.ps1 or package)
+Get-Content "$env:TEMP\csw-agent-tanium-install.log" -Tail 80
+
+# Confirm user.cfg before reinstall
+Get-Content 'C:\Program Files\Tanium\csw\user.cfg'
+
+# Network
+Test-NetConnection <cluster-fqdn> -Port 443
+```
+
+Search the MSI log for `Return value 3` — the line above it is usually the root cause.
+
+#### Windows symptom table
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Wrapper throws: `Missing user.cfg` | Staging step skipped | Run `stage-user-cfg.ps1` as **first** package step |
+| Wrapper throws: `ACTIVATION_KEY is empty` | Tanium secret variable not set | Bind `CSW Activation Key` package variable |
+| `msiexec` exit `1603` | Generic MSI failure | Read verbose log; common sub-cause is EDR block |
+| `Error 1722` in MSI log | Custom action failed (often Defender) | Add Cisco exclusions per [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md) |
+| Service missing after "success" | Partial MSI / driver not loaded | Re-extract full ZIP; confirm `ca.cert`, `site.cfg`, `sensor_config` present |
+| `tls handshake failed: x509 unknown authority` | Site files not from this cluster | Re-download Cisco package; do not hand-craft `ca.cert` |
+| Service running; UI *Not Active* | Wrong/missing activation key | Pre-stage `user.cfg` **before** MSI; regenerate key if rotated |
+| `Test-NetConnection` fails on 443 | Firewall / proxy | Open egress; add `HTTPS_PROXY` to `user.cfg` |
+| `kernel filter driver failed to load` | Secure Boot / signing policy | Confirm Cisco-signed driver allowed by policy |
+| Tanium success but no install log | Wrong working directory | Pass full path to `-InstallDir`; run PowerShell elevated |
+| `unauthorized` after registration attempt | Key rotated or wrong tenant | Regenerate MSI bundle + update Tanium variable |
+
+Deeper verification: [`../windows/06-verification.md`](../windows/06-verification.md)
 
 ---
 

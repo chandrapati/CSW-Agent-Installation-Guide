@@ -394,6 +394,21 @@ package version.
 
 ---
 
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `terraform apply` replaces instances but agent missing | `user_data` template error or silent cloud-init failure | Check `/var/log/cloud-init-output.log` on replaced instance |
+| Plan shows no change but agents outdated | Variable not referenced in `user_data` hash | Bump `csw_agent_version` or use `templatefile()` hash trigger |
+| Wrong scope on new VMs | Workspace var mismatch | Confirm `csw_scope` per Terraform workspace |
+| Activation key in state/plan output | Key in plain Terraform var | Move to SSM / Key Vault / Secret Manager; render `user.cfg` at boot |
+| Partial fleet on new version | ASG rolling update too aggressive | Lower `max_batch_size` / increase `min_healthy_percentage` |
+| Golden AMI path: build registers cluster | Agent started during Packer build | Mask `csw-agent` during build; use `--golden-image` / first-boot activation |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
+
+---
+
 ## See also
 
 - [`./examples/terraform/`](./examples/terraform/) — runnable Terraform per cloud

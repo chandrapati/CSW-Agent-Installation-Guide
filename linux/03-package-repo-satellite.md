@@ -239,6 +239,21 @@ Treat the CSW-published signing key like any other vendor key:
 
 ---
 
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `yum`/`apt` can't find `tet-sensor` | Repo metadata not synced on host | Run `dnf clean all && dnf makecache` or `apt update`; confirm repo URL matches OS major version |
+| GPG check failed on install | Wrong or missing signing key | Re-import CSW key from UI; confirm fingerprint in release notes |
+| Package installs but agent *Not Active* | Repo install without activation config | Repo-only installs still need activation — use CSW-generated installer or pre-stage `user.cfg` + site files per [`../tanium/README.md`](../tanium/README.md) |
+| Wrong agent version deployed | `latest` tag in repo without promotion gate | Pin version in repo metadata; promote staging → prod deliberately |
+| Satellite sync fails | Air-gap transfer incomplete | Re-run sync from authoritative upstream; verify checksum on `.rpm`/`.deb` |
+| `csw-agent` fails after repo upgrade | Kernel mismatch on new agent build | Install matching `kernel-devel`; see [`01-manual-rpm-deb.md`](./01-manual-rpm-deb.md) Step 6 |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) · Linux verification: [`08-verification.md`](./08-verification.md)
+
+---
+
 ## When this is the right method
 
 - **Air-gapped environments.** No outbound from workloads to

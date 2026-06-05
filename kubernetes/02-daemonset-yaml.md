@@ -144,6 +144,21 @@ spec:
 
 ---
 
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| DaemonSet pods `Pending` | PSA / admission policy | Label namespace; check `kubectl describe pod` events |
+| `ImagePullBackOff` | Nodes can't reach CSW cluster registry | Mirror image; configure containerd proxy per Cisco K8s guide |
+| Pods `Running` but no telemetry | Wrong Secret/ConfigMap from installer | Re-apply manifests from fresh Agent Script Installer output |
+| Only some nodes have pods | Taints / node selectors | Add tolerations or adjust `nodeSelector` from generated manifest |
+| Rollout stuck | PDB + single unhealthy node | Temporarily relax PDB or fix failing node |
+| Activation in plain YAML | Secret exposure | Use Secret object from Cisco-generated install only |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) · [`05-verification.md`](./05-verification.md)
+
+---
+
 ## See also
 
 - No static DaemonSet / RBAC manifest is shipped; export the

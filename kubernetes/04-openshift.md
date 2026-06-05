@@ -89,15 +89,18 @@ oc describe pod -n tetration <pending-pod-name>
 
 ---
 
-## OpenShift-specific gotchas
+## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| Pods fail with `unable to validate against any security context constraint: provider "privileged"` | SCC not bound to the ServiceAccount | Bind `privileged` SCC to the ServiceAccount from the Cisco-generated manifest in the `tetration` namespace |
-| Pods fail with `unable to validate against any security context constraint` (no provider listed) | No SCC matches the pod's requested capabilities | The pod requests something not on `privileged` SCC; check the pod spec, usually a non-default capability or volume |
-| Sensor installs but reports no flows from pods running with `runAsNonRoot` enforcement | OpenShift's `restricted-v2` SCC randomises UIDs; the sensor still sees flows because it captures at the host network namespace, not the pod | This usually isn't an issue — verify with `oc exec` into a sensor pod and check `ss -tn` shows host connections |
-| Internal Helm chart applies but its ServiceAccount doesn't have the SCC binding | Internal chart drifted from the Cisco-generated manifest | Use the ServiceAccount from the generated manifest, or re-bind SCC to the chart-created ServiceAccount after validating the change |
-| OpenShift cluster updates restart sensor pods every cycle | Expected behaviour from machine-config rotation | Make sure observability picks up the disruption as a *known cause*, not a sensor failure |
+| Pods fail: `unable to validate against any security context constraint: provider "privileged"` | SCC not bound to ServiceAccount | Bind `privileged` SCC to Cisco-generated ServiceAccount in `tetration` namespace |
+| Pods fail SCC (no provider listed) | Pod requests exceed SCC | Compare pod spec to generated manifest; adjust only after validation |
+| Internal Helm chart missing SCC binding | Chart drift from Cisco manifest | Re-bind SCC to chart ServiceAccount |
+| Sensor pods restart on cluster upgrade | Machine-config rotation | Expected; monitor as known cause |
+| No flows despite Running pods | Wrong Secret / cluster URL in ConfigMap | Re-run Agent Script Installer; apply fresh Secret |
+| `ImagePullBackOff` on OpenShift | Registry pull from CSW cluster blocked | Mirror image to internal OpenShift registry |
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md) · [`05-verification.md`](./05-verification.md)
 
 ---
 

@@ -281,6 +281,22 @@ salt '*' grains.item csw_sensor_active
 
 ---
 
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `state.apply csw_sensor` fails on minions | Pillar missing `csw:activation_key` | Populate pillar from vault; run `salt '*' pillar.get csw:activation_key` |
+| Highstate succeeds; UI shows *Not Active* | Key/scope wrong in rendered config | Regenerate pillar; confirm `user.cfg` if using bundled installer |
+| Partial fleet failure | Grain mismatch in top file | `salt -G 'os:RedHat' test.ping`; fix top.sls targeting |
+| State runs but service down | Package upgraded without kernel headers | Add `pkg.installed` for `kernel-devel` before agent package |
+| Reactor doesn't trigger install | Missing `salt/minion/startup` event | Confirm reactor SLS and master config; use scheduled highstate as fallback |
+
+Debug: `salt 'host*' cmd.run 'systemctl status csw-agent'`, `journalctl -u csw-agent`.
+
+Full troubleshooting: [`../operations/06-troubleshooting.md`](../operations/06-troubleshooting.md)
+
+---
+
 ## When this is the right method
 
 - **Fleet already managed by Salt.** Re-uses your existing master,

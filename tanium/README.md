@@ -21,6 +21,61 @@ a **`user.cfg`** file.
 > command. Skipping this step produces agents that install but fail registration
 > with *Not Active* / *unauthorized* in the CSW UI.
 
+> **Linux and Windows are separate CSW downloads — not one combined package.**
+> In the CSW UI (*Manage → Agents → Install Agent*), you choose **OS** first.
+> Cisco generates a **different installer for Linux than for Windows**. There is
+> no single ZIP or script that installs both. Your Tanium team must build **at
+> least two Deploy packages** (one Linux, one Windows) unless you are rolling
+> out only one OS family.
+
+---
+
+## Linux vs Windows — separate downloads (read this first)
+
+Cisco does **not** ship one universal agent bundle. Each download from the CSW
+UI is scoped to the choices you make in the installer wizard. Treat every row in
+the table below as a **separate download** and, in Tanium, a **separate software
+package** (or package family).
+
+| What you select in CSW UI | What you get | Tanium package |
+|---|---|---|
+| **OS = Linux** + RHEL/Rocky/Alma (RPM family) | `.rpm` + site files, or Linux `.sh` script | **Linux RPM Tanium package** → target RHEL-family computer group |
+| **OS = Linux** + Ubuntu/Debian (DEB family) | `.deb` + site files, or Linux `.sh` script | **Linux DEB Tanium package** → target Debian-family computer group |
+| **OS = Linux** + SUSE | SUSE `.rpm` + site files, or Linux `.sh` script | **Linux SUSE Tanium package** (if your fleet includes SLES) |
+| **OS = Windows** | `TetrationAgentInstaller.msi` + site files in a ZIP, or Windows `.ps1` script | **Windows Tanium package** → target Windows computer group |
+
+### What this means for your customer
+
+1. **Download twice (minimum)** if you have both Linux and Windows endpoints —
+   once with **Linux** selected, once with **Windows** selected. Do not reuse
+   the Linux `.rpm` on Windows or the Windows `.msi` on Linux.
+2. **Download again per Linux distro family** if you run both RHEL and Ubuntu —
+   an `.rpm` built for RHEL 9 will not install on Ubuntu (you need the `.deb`
+   generated for that Ubuntu version).
+3. **Use separate Tanium computer groups** — e.g. `CSW-Linux-RHEL-Prod` and
+   `CSW-Windows-Server-Prod` — each linked to the matching package.
+4. **Activation key and `user.cfg`** — generate or copy the key from the **same
+   CSW wizard session** where you downloaded the installer for that OS/scope.
+   Keys are tied to tenant + scope; Linux and Windows downloads for the same
+   scope may show the same key or separate keys depending on your cluster —
+   always use the key displayed for **that** download.
+5. **Site files are per download too** — `ca.cert`, `site.cfg`, and related
+   files ship with each bundle. Do not mix site files from a Windows ZIP into a
+   Linux Tanium package (or vice versa).
+
+```
+CSW UI — Install Agent
+        │
+        ├── OS: Linux  ──► Download #1 (e.g. RHEL 9 .rpm + site files)
+        │       └── Tanium Package A → Linux endpoints only
+        │
+        └── OS: Windows ──► Download #2 (.msi ZIP + site files)
+                └── Tanium Package B → Windows endpoints only
+```
+
+If your fleet is **Linux-only**, you still need **one Tanium package per distro
+packaging format** (RPM vs DEB) unless every Linux host shares the same family.
+
 ---
 
 ## Prerequisites
@@ -28,11 +83,13 @@ a **`user.cfg`** file.
 - All items from [`../docs/01-prerequisites.md`](../docs/01-prerequisites.md)
 - Tanium Deploy or Provision licensed and reachable from target endpoints
 - Local **root (Linux)** or **Administrator (Windows)** at install time
-- The CSW installer artefacts for your cluster, scope, and sensor type:
-  - **Linux:** Agent Script Installer (`.sh`) or Agent Image Installer bundle
-    (`.rpm`/`.deb` + site files)
-  - **Windows:** Agent Image Installer ZIP (`TetrationAgentInstaller.msi` +
+- The CSW installer artefacts for your cluster, scope, and sensor type —
+  **downloaded separately per OS** (see [Linux vs Windows — separate downloads](#linux-vs-windows--separate-downloads-read-this-first)):
+  - **Linux only:** Agent Script Installer (`.sh`) or Agent Image Installer
+    (`.rpm` *or* `.deb` + site files — match the host's distro)
+  - **Windows only:** Agent Image Installer ZIP (`TetrationAgentInstaller.msi` +
     site files) or CSW-generated PowerShell script
+  - **Not valid:** one Tanium package containing both `.msi` and `.rpm`/`.deb`
 - A secure channel to inject the activation key into Tanium (Tanium **Global
   Variable**, **Package variable**, or secrets store — never hardcode the key
   in a Tanium package definition checked into Git)
@@ -75,19 +132,27 @@ deliverable**:
 
 ---
 
-## Step 1 — Retrieve the activation key from CSW
+## Step 1 — Retrieve the activation key and download (per OS)
+
+Repeat this step **once per OS family** you are deploying (Linux and Windows are
+**separate** wizard runs and **separate** downloads).
 
 1. Log into the CSW UI.
 2. Navigate to **Manage → Agents → Install Agent** (or **Manage → Workloads →
    Agents → Installer** — wording varies by release).
-3. Choose **tenant** (if multi-tenant), **OS**, **sensor type**, and **target
-   scope**.
-4. Note or copy the **activation key** displayed for that installer context.
+3. Choose **tenant** (if multi-tenant), **OS** (**Linux** *or* **Windows** —
+   not both), **distribution/version** (Linux only), **sensor type**, and
+   **target scope**.
+4. Note or copy the **activation key** displayed for **this** installer context.
    Treat it as a **secret** — same sensitivity as the generated install script.
-5. Download the installer bundle or script for the same choices.
+5. Click **Download** — save the Linux `.rpm`/`.deb`/`.sh` **or** the Windows
+   MSI/ZIP/`.ps1`. This download applies **only** to the OS you selected.
+6. If you also deploy the other OS, **start a new wizard run**, select the other
+   **OS**, and download again.
 
 If your organisation rotates activation keys, regenerate the key in the UI and
-update Tanium package variables **before** the next deployment wave.
+update the matching Tanium package variable **for that OS package** before the
+next deployment wave.
 
 ---
 
@@ -198,15 +263,24 @@ version.
 
 ### 4a — Create the software package
 
+Create **one Tanium package per CSW download** (Linux RPM, Linux DEB, Windows
+MSI, etc.). Do not combine OS families in a single package.
+
 1. **Tanium Console → Deploy → Software → New Package**
-2. **Name:** `Cisco Secure Workload Agent <version> — <scope>`
+2. **Name:** use OS in the name so operators can tell them apart, e.g.
+   `CSW Agent <version> — Linux RHEL9 — <scope>` and
+   `CSW Agent <version> — Windows — <scope>`
 3. **Package type:** Standard (or use Provision image hook for bare-metal)
-4. **Upload** the layout from Step 3, **or** use a two-step package:
+4. **Upload** the layout from Step 3 for **that OS only**, **or** use a two-step
+   package:
    - **Step 1:** Run staging script (writes `user.cfg` from Tanium variable)
-   - **Step 2:** Run install wrapper
+   - **Step 2:** Run install wrapper (`tanium-linux-install.sh` *or*
+     `tanium-windows-install.ps1` — not both)
 5. **Package variables:** define `CSW Activation Key` (secret) and optional
    `CSW HTTPS Proxy` — reference them in staging scripts, not in clear text in
-   the package body.
+   the package body. Use the key from the **matching** CSW download.
+6. **Target:** deploy each package only to a computer group filtered by OS
+   (and, for Linux, by distro family if you split RPM vs DEB).
 
 ### 4b — Install command (Linux)
 
@@ -280,7 +354,9 @@ Linux- and Windows-specific diagnostics. Full cross-platform flowcharts:
 | Package step 1 succeeds, step 2 fails immediately | Install ran before `user.cfg` was staged | Re-order package steps: **stage key → deploy bundle → install** |
 | `CSW_ACTIVATION_KEY is not set` from staging script | Tanium variable not bound to package | Define secret package variable; map to `CSW_ACTIVATION_KEY` env var |
 | Tanium reports success but CSW UI shows *Not Active* | Empty/wrong `ACTIVATION_KEY` in `user.cfg` | Confirm `grep ACTIVATION_KEY` on endpoint **before** install; regenerate key in CSW UI |
-| Package succeeds on pilot, fails at scale | Mixed OS/arch in one package | Split Linux RPM vs DEB packages; separate Windows package |
+| Package succeeds on pilot, fails at scale | Mixed OS/arch in one package | **Separate Tanium packages** per CSW download: Linux RPM, Linux DEB, Windows — never combined |
+| `OS not supported` / wrong package type on Linux | Windows MSI or wrong `.rpm`/`.deb` in Linux package | Re-download from CSW UI with **Linux** + correct distro; rebuild Linux-only package |
+| MSI/script errors on Windows | Linux `.sh` or `.rpm` deployed to Windows hosts | Re-download with **Windows** selected; Windows-only Tanium package |
 | Intermittent failures across fleet | Tanium client check-in / action timeout | Increase package timeout; roll in smaller computer groups |
 | Install files missing on endpoint | Package extract path differs from script `-InstallDir` | Use one fixed path (`/opt/tanium/csw/` or `C:\Program Files\Tanium\csw\`) in all steps |
 

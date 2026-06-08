@@ -6,9 +6,17 @@ date: "May 2026"
 
 **Repo:** [github.com/chandrapati/CSW-Agent-Installation-Guide](https://github.com/chandrapati/CSW-Agent-Installation-Guide) · **Full runbook:** [`tanium/README.md`](https://github.com/chandrapati/CSW-Agent-Installation-Guide/blob/main/tanium/README.md)
 
-## Critical rule
+## Critical rules
 
-**Write `user.cfg` with the activation key in the install directory *before* Tanium runs any install command.** Without it, the agent may install but stay *Not Active* / *unauthorized* in the CSW UI.
+**1. Linux and Windows are separate CSW downloads.** In *Manage → Agents → Install
+Agent*, choose **OS = Linux** and download (`.rpm`/`.deb`/`.sh` + site files),
+then run the wizard again with **OS = Windows** and download (`.msi` ZIP + site
+files). Build **separate Tanium packages** — do not put Windows and Linux
+installers in one package.
+
+**2. Pre-stage `user.cfg` before install.** Write the activation key in the
+install directory *before* Tanium runs any install command. Without it, the
+agent may install but stay *Not Active* / *unauthorized* in the CSW UI.
 
 ```ini
 ACTIVATION_KEY=<from CSW UI → Manage → Agents → Install Agent>
@@ -19,18 +27,32 @@ HTTPS_PROXY=http://proxy.example.com:8080   # optional
 
 ## Pre-flight (CSW admin)
 
+Complete the block below **once per OS** (Linux download, then Windows download
+if both are in scope).
+
 | Step | Done |
 |------|:----:|
 | Confirm target **tenant**, **scope**, **OS**, and **sensor type** (Visibility vs Enforcement) | ☐ |
-| Open **Manage → Agents → Install Agent**; copy **activation key** (treat as secret) | ☐ |
-| Download installer bundle or script for the **same** choices | ☐ |
+| **Linux:** wizard → OS **Linux** → pick **distro/version** → copy **activation key** → **Download** (`.rpm` or `.deb` or `.sh` + site files) | ☐ |
+| **Windows:** new wizard run → OS **Windows** → copy **activation key** → **Download** (MSI ZIP + site files) | ☐ |
 | Confirm outbound **443/TCP** (and on-prem collector/enforcer ports if applicable) | ☐ |
 | Configure **EDR/AV exclusions** on endpoints before deploy | ☐ |
-| Store activation key in **Tanium package variable** (not plain-text Git) | ☐ |
+| Create **separate Tanium packages** (Linux vs Windows; split RPM vs DEB if needed) | ☐ |
+| Store each OS's activation key in **that package's** Tanium variable (not plain-text Git) | ☐ |
 
 ---
 
-## Package contents (same folder on every endpoint)
+## Tanium packages (one per CSW download)
+
+| Tanium package | CSW download | Target group |
+|----------------|--------------|--------------|
+| CSW — Linux RHEL/Rocky (RPM) | OS Linux + RPM family | Linux RPM hosts only |
+| CSW — Linux Ubuntu/Debian (DEB) | OS Linux + DEB family | Linux DEB hosts only |
+| CSW — Windows | OS Windows + MSI ZIP | Windows hosts only |
+
+---
+
+## Package contents (same folder on every endpoint — per OS package)
 
 | File | Required |
 |------|:--------:|
@@ -76,6 +98,8 @@ HTTPS_PROXY=http://proxy.example.com:8080   # optional
 | *Not Active* / *unauthorized* | Confirm `user.cfg` with valid `ACTIVATION_KEY` existed **before** install step ran |
 | Package step order wrong | Rebuild package: **(1) stage user.cfg → (2) deploy bundle → (3) install** |
 | Key in Tanium variable empty | Fix secret variable binding; pilot on one host before fleet |
+| Linux hosts get Windows MSI (or vice versa) | Wrong package targeted | Separate CSW downloads → separate Tanium packages → OS-filtered computer groups |
+| `OS not supported` on Linux | `.deb` sent to RHEL or `.rpm` to Ubuntu | Download correct family from CSW UI; match package to distro |
 
 ### Linux
 

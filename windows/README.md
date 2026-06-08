@@ -86,7 +86,7 @@ pre-3.8 agents bind to Npcap; modern installs do not.**
 | 03 | Microsoft Configuration Manager (SCCM / MECM) | Standard enterprise pattern for on-prem Windows fleets | [03-sccm-deployment.md](./03-sccm-deployment.md) |
 | 04 | Microsoft Intune | Cloud-managed Windows fleets | [04-intune-deployment.md](./04-intune-deployment.md) |
 | 05 | Group Policy (GPO) startup script | Domain-joined fallback when SCCM / Intune aren't available | [05-group-policy.md](./05-group-policy.md) |
-| — | Tanium Deploy | Windows endpoints under Tanium | [../tanium/README.md](../tanium/README.md) — OS-specific troubleshooting |
+| — | Tanium Deploy | Windows endpoints under Tanium | [../tanium/README.md](../tanium/README.md) — **Windows is a separate CSW download** from Linux; OS-specific troubleshooting |
 | 06 | Verification | Confirming the install actually worked | [06-verification.md](./06-verification.md) |
 
 > **Cisco-documented** vs. **community pattern** breakdown:

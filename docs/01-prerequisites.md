@@ -45,7 +45,10 @@ Restated from the CSW 4.0 User Guide (On-Prem and SaaS):
   in the **same directory as the installer script or MSI** —
   **before** the orchestrator runs any install command. If the
   workload egresses through a proxy, add `HTTPS_PROXY` to
-  `user.cfg` as well. See
+  `user.cfg` as well.   **Linux and Windows agent files are separate downloads** from the CSW UI
+  (*Manage → Agents → Install Agent* — choose OS per download). Tanium and
+  other orchestrators need **one package per OS** (and per Linux distro family
+  when mixing RPM and DEB). See
   [`../tanium/README.md`](../tanium/README.md) for a full
   Tanium walkthrough and
   [`../tanium/examples/user.cfg.example`](../tanium/examples/user.cfg.example)

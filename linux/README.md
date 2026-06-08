@@ -33,7 +33,7 @@ agent registered against the CSW cluster.
 | 05 | Puppet manifest | Linux fleets where Puppet runs | [05-puppet.md](./05-puppet.md) |
 | 06 | Chef recipe | Linux fleets where Chef runs | [06-chef.md](./06-chef.md) |
 | 07 | Salt state | Linux fleets where Salt runs | [07-saltstack.md](./07-saltstack.md) |
-| — | Tanium Deploy | Linux endpoints under Tanium | [../tanium/README.md](../tanium/README.md) — OS-specific troubleshooting |
+| — | Tanium Deploy | Linux endpoints under Tanium | [../tanium/README.md](../tanium/README.md) — **Linux is a separate CSW download** from Windows; OS-specific troubleshooting |
 | 08 | Verification | Confirming the install actually worked | [08-verification.md](./08-verification.md) |
 
 > **Cisco-documented vs. community patterns.** Methods 01 and 02

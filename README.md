@@ -1,5 +1,7 @@
 # Cisco Secure Workload — Agent Installation Guide
 
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=chandrapati.CSW-Agent-Installation-Guide&left_text=visitors)
+
 A practitioner-oriented reference for installing and operating the
 Cisco Secure Workload (CSW) host agent — the component formerly
 known as *Tetration sensor* — across Linux, Windows, cloud,

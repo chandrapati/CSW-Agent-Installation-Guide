@@ -228,6 +228,41 @@ Detail in [`docs/02-sensor-types.md`](./docs/02-sensor-types.md).
 
 ---
 
+## Supported Operating Systems
+
+Cisco Secure Workload software agents run across a broad set of platforms. The table below summarizes the OS families supported by the current agent (**Secure Workload 4.0.x**). Minimum kernel/package versions, per-version *Enforcement* vs *Deep Visibility* support, and architecture coverage vary by release — always confirm against the authoritative source:
+
+📄 **[Secure Workload Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html)** — filterable by agent version; lists supported operating systems, external systems, and connector requirements.
+
+| OS family | Supported versions (current agent) | Architectures |
+|-----------|------------------------------------|---------------|
+| **Red Hat Enterprise Linux** | 6.x – 9.x | x86_64, ppc64le, s390x |
+| **CentOS** | 6.x – Stream 9 | x86_64, ppc64le |
+| **Oracle Linux** (RHCK & UEK) | 6.x – 9.x | x86_64 |
+| **AlmaLinux / Rocky Linux** | 8.x, 9.x | x86_64, ppc64le |
+| **Ubuntu** | 14.04 – 24.04 | x86_64, arm64 (22.04 / DPU) |
+| **Debian** | 8.x – 12.x | x86_64 |
+| **SUSE Linux Enterprise Server** | 11.x – 15.x | x86_64, ppc64le, s390x |
+| **Fedora** | 32 – 37 | x86_64 |
+| **Amazon Linux** | 2, 2023 | x86_64 |
+| **Microsoft Windows** (client) | 10, 11 (incl. Pro for Workstations; Enterprise LTSC 2016/2019/2022) | x86_64, arm64 (Win 11) |
+| **Microsoft Windows Server** | 2008 R2 – 2025 (incl. Storage Server 2012 R2 / 2016) | x86_64 |
+| **IBM AIX** | 6.1, 7.1, 7.2, 7.3 | PowerPC |
+| **Oracle Solaris** | 10, 11.4 | x86_64, SPARC |
+| **Containers — Kubernetes** | 1.16 – 1.31 | x86_64 (Linux & Windows nodes) |
+| **Containers — OpenShift** | RHEL CoreOS 4.5 – 4.17 | x86_64 |
+
+**Notes**
+
+- **Two agent capabilities:** *Deep Visibility* (process/flow telemetry) and *Enforcement* (host-firewall programming — iptables/nftables on Linux, WFP/WAF on Windows). Not every OS/version supports both — check the matrix.
+- **Linux enforcement** requires iptables ≥ 1.6.0 **or** nftables ≥ 1.0.0 (older minimums on legacy releases); other host firewall managers should be disabled.
+- **Windows** requires PowerShell 4.0+ and Windows Firewall with Advanced Security enabled for enforcement.
+- **AIX / Solaris** have feature limits (e.g., Process Visibility & Forensics restricted on older releases; IPv6 enforcement not supported on AIX).
+- **Virtual appliances / Secure Connector** (for connectors and SaaS orchestrator proxy) run on RHEL 7.x/9.0, CentOS 7.x, AlmaLinux 8.8, or Rocky Linux 9.2.
+- Agent support lifecycle is governed by the **Secure Workload Software Agent Support Policy** referenced from the matrix.
+
+---
+
 ## Installation method decision matrix (high level)
 
 | Environment | Recommended primary method | When to use |

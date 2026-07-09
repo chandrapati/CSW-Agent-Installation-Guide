@@ -341,6 +341,8 @@ being used to gate any production change.
 
 ## Step-by-Step Guides
 
+> **Legend:** 🎬 video · 📘 guide · 📄 doc
+
 Hands-on integration and deployment guides — follow these top to bottom to build out a deployment:
 
 | Guide | Description | Best for |
@@ -363,6 +365,8 @@ Hands-on integration and deployment guides — follow these top to bottom to bui
 
 ## Resources
 
+> **Legend:** 🎬 video · 📘 guide · 📄 doc
+
 Learning paths, reference material, and day-2 tooling:
 
 | Resource | Description | Best for |
@@ -371,6 +375,7 @@ Learning paths, reference material, and day-2 tooling:
 | [📘 Compliance Mapping](https://github.com/chandrapati/CSW-Compliance-Mapping) | Map CSW controls to NIST, PCI-DSS, HIPAA, CIS | Compliance & audit |
 | [📘 Tenant Insights](https://github.com/chandrapati/CSW-Tenant-Insights) | Tenant-level reporting and analytics | Visibility metrics |
 | [📘 Operations Toolkit](https://github.com/chandrapati/CSW-Operations-Toolkit) | Day-2 ops scripts: health checks, reporting, policy analysis | Ongoing operations |
+| [📄 Supported OS & Compatibility Matrix](https://www.cisco.com/c/m/en_us/products/security/secure-workload-compatibility-matrix.html) | Cisco's authoritative list of supported agent operating systems, external systems, and connector requirements | Platform planning & prerequisites |
 
 > **Suggested customer journey:**
 > User Education → Agent Installation → Policy Lifecycle → ISE/pxGrid → ServiceNow CMDB → Infoblox → F5 BIG-IP → NetScaler ADC → Splunk Integration → Compliance Mapping → Operations Toolkit

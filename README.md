@@ -148,6 +148,14 @@ telemetry into a working policy workspace"* without surprises.
 
 ---
 
+## Architecture
+
+![Cisco Secure Workload Agent Installation Architecture](csw-agent-architecture.png)
+
+*Deep Visibility and Enforcement agents on Linux, Windows, AIX/Solaris, and Kubernetes/OpenShift report flow + process telemetry to the Secure Workload collectors over TLS; enforcement policy is pushed back and applied host-side via the native workload firewall (iptables/nftables, WFP). Where an agent isn't deployed, agentless paths — AnyConnect, ISE (pxGrid), ERSPAN, NetFlow/IPFIX, and cloud connectors — feed the same platform.*
+
+---
+
 ## How to use this guide
 
 0. **Read [`docs/00-official-references.md`](./docs/00-official-references.md) first.**
